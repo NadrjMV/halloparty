@@ -35,6 +35,10 @@
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Chonburi&display=swap"
         rel="stylesheet">
 
+    <!-- QR generate + scan -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
     <style>
         :root {
             --bg-main: #0c0a12;
@@ -562,16 +566,37 @@
             <!-- TAB 2: CHECK-IN / PORTARIA -->
             <section id="tab-checkin" class="tab-content">
                 <div class="surface-soft p-3 mb-3.5">
-                    <div class="relative">
-                        <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
-                            style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input type="text" id="checkinSearchInput" class="field-input w-full pl-10 text-sm"
-                            placeholder="Buscar por nome, telefone ou fantasia...">
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
+                                style="color: var(--text-faint);" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input type="text" id="checkinSearchInput" class="field-input w-full pl-10 text-sm"
+                                placeholder="Buscar por nome, telefone ou fantasia...">
+                        </div>
+                        <button id="openScannerBtn" aria-label="Escanear QR Code" class="icon-action shrink-0"
+                            style="width:42px; height:42px; color:#8b5cf6;">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v1m6 11h2m-6 0h-2v2m-4-13H6a2 2 0 00-2 2v2m14-4h2a2 2 0 012 2v2M4 16v2a2 2 0 002 2h2m10-4v2a2 2 0 01-2 2h-2M4 12h16M9 4h2v2H9V4zm4 0h2v2h-2V4zM9 18h2v2H9v-2z" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
+
+                <div id="scanResultBanner"
+                    class="hidden surface-soft p-2.5 mb-3 flex items-center justify-between gap-2"
+                    style="border-color: rgba(139,92,246,0.3);">
+                    <span class="text-xs font-semibold flex items-center gap-1.5" style="color:#8b5cf6;">
+                        Resultado do QR Code
+                    </span>
+                    <button id="clearScanBtn" class="text-[11px] font-semibold underline"
+                        style="color: var(--text-faint);">limpar</button>
+                </div>
+
                 <div id="checkinContainer" class="flex flex-col gap-3"></div>
             </section>
 
@@ -796,11 +821,73 @@
         </div>
     </div>
 
+    <!-- TICKET QR MODAL -->
+    <div id="ticketModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+        style="background: var(--scrim); backdrop-filter: blur(4px);">
+        <div class="modal-box surface p-5 max-w-[300px] w-full text-center">
+            <h3 id="ticketModalName" class="text-base font-bold mb-1 truncate">—</h3>
+            <p class="text-xs mb-4" style="color: var(--text-sub);">Mostre esse QR na entrada da festa.</p>
+            <div id="ticketQrCanvas" class="flex items-center justify-center p-3 rounded-2xl mb-4"
+                style="background:#ffffff; min-height:190px;"></div>
+            <div class="flex flex-col gap-2">
+                <a id="ticketWhatsappBtn" target="_blank"
+                    class="btn-approve w-full py-2.5 rounded-xl font-semibold text-xs hidden">Enviar por
+                    WhatsApp</a>
+                <button id="ticketCopyBtn" class="btn-ghost w-full py-2.5 rounded-xl font-semibold text-xs">Copiar
+                    Link</button>
+                <button id="ticketCloseBtn" class="btn-ghost w-full py-2.5 rounded-xl font-semibold text-xs">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR SCANNER MODAL -->
+    <div id="scannerModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+        style="background: var(--scrim); backdrop-filter: blur(4px);">
+        <div class="modal-box surface p-5 max-w-[340px] w-full">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-base font-bold">Escanear QR Code</h3>
+                <button id="scannerCloseBtn" aria-label="Fechar" style="color: var(--text-faint);">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="qrReaderContainer" class="rounded-xl overflow-hidden" style="background:#000;"></div>
+            <p id="scannerStatusText" class="text-xs mt-3 text-center" style="color: var(--text-faint);">Aponte a
+                câmera para o QR do convidado.</p>
+        </div>
+    </div>
+
+    <!-- PUBLIC TICKET VIEW (no login required) -->
+    <div id="ticketView" class="hidden fixed inset-0 z-[95] flex items-center justify-center p-4"
+        style="background: var(--bg-main);">
+        <div class="ambient-wash"></div>
+        <div class="w-full max-w-[320px] relative z-10 text-center">
+            <img src="assets/favicon.png" alt="" class="h-14 w-14 object-cover rounded-full mx-auto mb-4"
+                style="box-shadow: 0 4px 18px -6px rgba(139,92,246,0.4);">
+            <div id="ticketViewLoading" class="text-xs" style="color: var(--text-sub);">Carregando ingresso...</div>
+            <div id="ticketViewContent" class="hidden surface p-5">
+                <h2 id="ticketViewName" class="text-lg font-bold mb-1 truncate">—</h2>
+                <p id="ticketViewMeta" class="text-xs mb-4" style="color: var(--text-sub);">—</p>
+                <div id="ticketViewQrCanvas" class="flex items-center justify-center p-3 rounded-2xl mb-2"
+                    style="background:#ffffff; min-height:190px;"></div>
+                <p class="text-[11px]" style="color: var(--text-faint);">Halloween Party · 31 OUT · 22H</p>
+            </div>
+            <div id="ticketViewError" class="hidden surface p-5">
+                <h2 class="text-base font-bold mb-1" style="color:#fb7185;">Ingresso não encontrado</h2>
+                <p class="text-xs" style="color: var(--text-sub);">Esse link não corresponde a nenhum convidado
+                    cadastrado.</p>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         // ---------- Firebase ----------
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
         import {
-            getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+            getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+            collection, doc, addDoc, updateDoc, deleteDoc,
             onSnapshot, query, orderBy, writeBatch, getDoc, setDoc, increment
         } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
         import {
@@ -818,7 +905,20 @@
         };
 
         const firebaseApp = initializeApp(firebaseConfig);
-        const db = getFirestore(firebaseApp);
+
+        // Offline persistence: keeps the app usable (reads + queued writes) if the
+        // wifi drops mid-event. Falls back to the in-memory cache if unsupported
+        // (e.g. private browsing) so the app never hard-fails on init.
+        let db;
+        try {
+            db = initializeFirestore(firebaseApp, {
+                localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+            });
+        } catch (err) {
+            console.warn('Cache offline indisponível, usando cache em memória.', err);
+            db = getFirestore(firebaseApp);
+        }
+
         const auth = getAuth(firebaseApp);
         const guestsCol = collection(db, 'guests');
         const guestsQuery = query(guestsCol, orderBy('createdAt', 'desc'));
@@ -837,8 +937,10 @@
                 notes: g.notes || '',
                 checkedIn: !!g.checkedIn,
                 checkinAt: g.checkinAt || null,
+                checkedInBy: g.checkedInBy || '',
                 banned: !!g.banned,
                 banReason: g.banReason || '',
+                bannedBy: g.bannedBy || '',
                 checkinNote: g.checkinNote || ''
             };
         }
@@ -934,6 +1036,29 @@
 
         const syncBanner = document.getElementById('syncBanner');
 
+        const openScannerBtn = document.getElementById('openScannerBtn');
+        const scannerModal = document.getElementById('scannerModal');
+        const scannerCloseBtn = document.getElementById('scannerCloseBtn');
+        const qrReaderContainer = document.getElementById('qrReaderContainer');
+        const scannerStatusText = document.getElementById('scannerStatusText');
+        const scanResultBanner = document.getElementById('scanResultBanner');
+        const clearScanBtn = document.getElementById('clearScanBtn');
+
+        const ticketModal = document.getElementById('ticketModal');
+        const ticketModalName = document.getElementById('ticketModalName');
+        const ticketQrCanvas = document.getElementById('ticketQrCanvas');
+        const ticketWhatsappBtn = document.getElementById('ticketWhatsappBtn');
+        const ticketCopyBtn = document.getElementById('ticketCopyBtn');
+        const ticketCloseBtn = document.getElementById('ticketCloseBtn');
+
+        const ticketView = document.getElementById('ticketView');
+        const ticketViewLoading = document.getElementById('ticketViewLoading');
+        const ticketViewContent = document.getElementById('ticketViewContent');
+        const ticketViewError = document.getElementById('ticketViewError');
+        const ticketViewName = document.getElementById('ticketViewName');
+        const ticketViewMeta = document.getElementById('ticketViewMeta');
+        const ticketViewQrCanvas = document.getElementById('ticketViewQrCanvas');
+
         initTheme();
         addListContainer.innerHTML = emptyState('Carregando lista...');
         checkinContainer.innerHTML = emptyState('Carregando lista...');
@@ -951,6 +1076,41 @@
         onSnapshot(invitesQuery, (snapshot) => {
             renderInvites(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
         }, (error) => console.error('Erro ao carregar convites:', error));
+
+        // ---------- Public ticket view (no login needed — guests open their QR link) ----------
+        const ticketCodeFromUrl = new URLSearchParams(location.search).get('ticket');
+
+        function renderQrInto(containerEl, text) {
+            containerEl.innerHTML = '';
+            new QRCode(containerEl, {
+                text, width: 190, height: 190,
+                colorDark: '#1a1424', colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+
+        async function loadPublicTicket(id) {
+            try {
+                const snap = await getDoc(doc(db, 'guests', id));
+                if (!snap.exists()) throw new Error('not_found');
+                const g = migrateGuest({ id: snap.id, ...snap.data() });
+                ticketViewName.textContent = g.name;
+                ticketViewMeta.textContent = `${g.ticketType} · ${g.status}`;
+                renderQrInto(ticketViewQrCanvas, g.id);
+                ticketViewLoading.classList.add('hidden');
+                ticketViewContent.classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                ticketViewLoading.classList.add('hidden');
+                ticketViewError.classList.remove('hidden');
+            }
+        }
+
+        if (ticketCodeFromUrl) {
+            authLoading.classList.add('hidden');
+            ticketView.classList.remove('hidden');
+            loadPublicTicket(ticketCodeFromUrl);
+        }
 
         // ---------- Auth (cadastro fechado por convite) ----------
         const inviteCodeFromUrl = new URLSearchParams(location.search).get('invite');
@@ -1012,6 +1172,7 @@
         });
 
         onAuthStateChanged(auth, async (user) => {
+            if (ticketCodeFromUrl) return; // public ticket page — ignore auth entirely
             if (user) {
                 currentUserEmail = user.email;
                 authLoading.classList.add('hidden');
@@ -1307,9 +1468,14 @@
             const g = guests.find(x => x.id === id);
             if (!g || g.banned) return;
             try {
-                await updateDoc(doc(db, 'guests', id), g.checkedIn
-                    ? { checkedIn: false, checkinAt: null }
-                    : { checkedIn: true, checkinAt: Date.now() });
+                if (g.checkedIn) {
+                    await updateDoc(doc(db, 'guests', id), { checkedIn: false, checkinAt: null, checkedInBy: '' });
+                } else {
+                    await updateDoc(doc(db, 'guests', id), {
+                        checkedIn: true, checkinAt: Date.now(), checkedInBy: currentUserEmail || ''
+                    });
+                    playApproveFeedback();
+                }
             } catch (err) {
                 console.error(err);
                 alert('Não foi possível confirmar a entrada. Verifique sua conexão.');
@@ -1322,19 +1488,42 @@
             try {
                 if (g.banned) {
                     if (!confirm('Remover o banimento deste convidado?')) return;
-                    await updateDoc(doc(db, 'guests', id), { banned: false, banReason: '' });
+                    await updateDoc(doc(db, 'guests', id), { banned: false, banReason: '', bannedBy: '' });
                     return;
                 }
                 if (!confirm('Banir este convidado? Ele não poderá ter a entrada aprovada.')) return;
                 const reason = prompt('Motivo do banimento (opcional):', '') || '';
                 await updateDoc(doc(db, 'guests', id), {
-                    banned: true, banReason: reason.trim(), checkedIn: false, checkinAt: null
+                    banned: true, banReason: reason.trim(), bannedBy: currentUserEmail || '',
+                    checkedIn: false, checkinAt: null, checkedInBy: ''
                 });
             } catch (err) {
                 console.error(err);
                 alert('Não foi possível atualizar o banimento. Verifique sua conexão.');
             }
         };
+
+        // Short two-tone chime (Web Audio, no file needed — works offline) + vibration
+        function playApproveFeedback() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = ctx.currentTime;
+                [660, 880].forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    const start = now + i * 0.09;
+                    gain.gain.setValueAtTime(0.0001, start);
+                    gain.gain.exponentialRampToValueAtTime(0.2, start + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+                    osc.connect(gain).connect(ctx.destination);
+                    osc.start(start);
+                    osc.stop(start + 0.2);
+                });
+            } catch (err) { /* audio not available, ignore */ }
+            if (navigator.vibrate) navigator.vibrate(120);
+        }
 
         window.toggleNoteRow = function (id) {
             const row = document.getElementById('noteRow-' + id);
@@ -1358,6 +1547,95 @@
                 alert('Não foi possível salvar a observação. Verifique sua conexão.');
             }
         };
+
+        // ---------- QR ticket modal (generate + share) ----------
+        window.openTicketModal = function (id) {
+            const g = guests.find(x => x.id === id);
+            if (!g) return;
+            ticketModalName.textContent = g.name;
+            renderQrInto(ticketQrCanvas, g.id);
+            const link = `${location.origin}${location.pathname}?ticket=${g.id}`;
+            if (g.phone) {
+                const msg = `Aqui está seu ingresso para a Halloween Party! Mostra esse link na entrada: ${link}`;
+                ticketWhatsappBtn.href = `https://wa.me/55${g.phone}?text=${encodeURIComponent(msg)}`;
+                ticketWhatsappBtn.classList.remove('hidden');
+            } else {
+                ticketWhatsappBtn.classList.add('hidden');
+            }
+            ticketCopyBtn.dataset.link = link;
+            ticketModal.classList.add('active');
+        };
+
+        function closeTicketModal() {
+            ticketModal.classList.remove('active');
+        }
+
+        ticketCloseBtn.addEventListener('click', closeTicketModal);
+        ticketCopyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(ticketCopyBtn.dataset.link || '');
+                ticketCopyBtn.textContent = 'Copiado!';
+                setTimeout(() => { ticketCopyBtn.textContent = 'Copiar Link'; }, 1500);
+            } catch { /* clipboard unavailable, ignore */ }
+        });
+
+        // ---------- QR scanner (portaria) ----------
+        let qrScanner = null;
+
+        async function startScanner() {
+            scannerStatusText.textContent = 'Aponte a câmera para o QR do convidado.';
+            scannerStatusText.style.color = 'var(--text-faint)';
+            try {
+                qrScanner = new Html5Qrcode('qrReaderContainer');
+                await qrScanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 220, height: 220 } },
+                    onScanSuccess,
+                    () => { /* per-frame scan miss, ignore */ }
+                );
+            } catch (err) {
+                console.error(err);
+                scannerStatusText.textContent = 'Não foi possível acessar a câmera. Verifique as permissões do navegador.';
+                scannerStatusText.style.color = '#fb7185';
+            }
+        }
+
+        async function stopScanner() {
+            if (!qrScanner) return;
+            try {
+                await qrScanner.stop();
+                qrScanner.clear();
+            } catch (err) { /* already stopped, ignore */ }
+            qrScanner = null;
+        }
+
+        function onScanSuccess(decodedText) {
+            stopScanner();
+            scannerModal.classList.remove('active');
+            const guest = guests.find(g => g.id === decodedText);
+            if (!guest) {
+                alert('QR não reconhecido — esse convidado não está na lista.');
+                return;
+            }
+            scannedGuestId = decodedText;
+            document.querySelector('[data-tab="tab-checkin"]').click();
+            renderCheckin();
+        }
+
+        openScannerBtn.addEventListener('click', () => {
+            scannerModal.classList.add('active');
+            startScanner();
+        });
+
+        scannerCloseBtn.addEventListener('click', () => {
+            stopScanner();
+            scannerModal.classList.remove('active');
+        });
+
+        clearScanBtn.addEventListener('click', () => {
+            scannedGuestId = null;
+            renderCheckin();
+        });
 
         // ---------- Rendering ----------
         function matchesSearch(g, term) {
@@ -1401,11 +1679,18 @@
                             ${flags}
                             ${guest.phone ? `<a href="${waLink}" target="_blank" class="font-medium" style="color:#22c55e;">WhatsApp</a>` : ''}
                         </div>
-                        ${opts.showDelete ? `<button onclick="removeGuest('${guest.id}')" class="p-1" style="color: var(--text-faint);">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>` : ''}
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="openTicketModal('${guest.id}')" aria-label="QR do ingresso" class="p-1" style="color: var(--text-faint);">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 8V4h4M4 16v4h4m8-16h4v4m-4 12h4v-4M4 12h16" />
+                                </svg>
+                            </button>
+                            ${opts.showDelete ? `<button onclick="removeGuest('${guest.id}')" class="p-1" style="color: var(--text-faint);">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>` : ''}
+                        </div>
                     </div>
                 </div>`;
         }
@@ -1435,12 +1720,21 @@
                 : emptyState('Nenhum convidado encontrado.');
         }
 
+        let scannedGuestId = null;
+
         function renderCheckin() {
-            const term = checkinSearchInput.value.toLowerCase().trim();
-            const filtered = guests.filter(g => matchesSearch(g, term));
+            let filtered;
+            if (scannedGuestId) {
+                filtered = guests.filter(g => g.id === scannedGuestId);
+                scanResultBanner.classList.remove('hidden');
+            } else {
+                const term = checkinSearchInput.value.toLowerCase().trim();
+                filtered = guests.filter(g => matchesSearch(g, term));
+                scanResultBanner.classList.add('hidden');
+            }
 
             if (!filtered.length) {
-                checkinContainer.innerHTML = emptyState('Nenhum convidado encontrado.');
+                checkinContainer.innerHTML = emptyState(scannedGuestId ? 'Convidado do QR não encontrado.' : 'Nenhum convidado encontrado.');
                 return;
             }
 
@@ -1459,11 +1753,16 @@
                                 ${guest.notes ? `<span style="color: var(--text-faint);">${escapeHtml(guest.notes)}</span>` : ''}
                             </div>
                         </div>
+                        <button onclick="openTicketModal('${guest.id}')" aria-label="QR do ingresso" class="icon-action shrink-0" style="width:34px; height:34px;">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M4 16v4h4m8-16h4v4m-4 12h4v-4M4 12h16" />
+                            </svg>
+                        </button>
                     </div>
 
                     ${guest.banned ? `
                         <div class="rounded-xl px-3 py-2.5 text-xs font-medium flex items-center justify-between gap-2" style="background: rgba(251,113,133,0.08); border: 1px solid rgba(251,113,133,0.22); color:#fb7185;">
-                            <span>🚫 Banido${guest.banReason ? ' — ' + escapeHtml(guest.banReason) : ''}</span>
+                            <span>🚫 Banido${guest.banReason ? ' — ' + escapeHtml(guest.banReason) : ''}${guest.bannedBy ? ` <span style="opacity:0.75;">· por ${escapeHtml(guest.bannedBy)}</span>` : ''}</span>
                             <button onclick="banGuest('${guest.id}')" class="underline shrink-0 font-semibold">desfazer</button>
                         </div>
                     ` : `
@@ -1490,6 +1789,7 @@
                         </div>
                     `}
 
+                    ${guest.checkedIn && guest.checkedInBy ? `<p class="text-[10.5px] px-0.5 -mt-1.5" style="color: var(--text-faint);">confirmado por ${escapeHtml(guest.checkedInBy)}</p>` : ''}
                     ${guest.checkinNote ? `<p class="text-[11px] px-0.5 -mt-1.5" style="color: var(--text-faint);">📝 ${escapeHtml(guest.checkinNote)}</p>` : ''}
 
                     <div id="noteRow-${guest.id}" class="note-row items-center gap-2">
@@ -1500,8 +1800,6 @@
                     </div>
                 </div>`;
             }).join('');
-
-            // Auto-open note rows that already have content isn't necessary; keep collapsed by default.
         }
 
         function updateStats() {
