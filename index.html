@@ -923,9 +923,9 @@
             </div>
 
             <div class="flex flex-col gap-2">
-                <a id="modalWhatsappBtn" target="_blank"
+                <button id="modalWhatsappBtn" type="button"
                     class="btn-approve w-full py-2.5 rounded-xl font-semibold text-xs hidden">Enviar por
-                    WhatsApp</a>
+                    WhatsApp</button>
                 <button id="modalCopyLinkBtn" class="btn-ghost w-full py-2.5 rounded-xl font-semibold text-xs">Copiar
                     Link do Ingresso</button>
                 <button id="modalContinueBtn"
@@ -993,9 +993,9 @@
                 <p id="ticketModalTransport" style="color: var(--text-faint);">—</p>
             </div>
             <div class="flex flex-col gap-2">
-                <a id="ticketWhatsappBtn" target="_blank"
+                <button id="ticketWhatsappBtn" type="button"
                     class="btn-approve w-full py-2.5 rounded-xl font-semibold text-xs hidden">Enviar por
-                    WhatsApp</a>
+                    WhatsApp</button>
                 <button id="ticketCopyBtn" class="btn-ghost w-full py-2.5 rounded-xl font-semibold text-xs">Copiar
                     Link</button>
                 <button id="ticketCloseBtn"
@@ -1060,7 +1060,7 @@
         } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
         import {
             getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-            createUserWithEmailAndPassword, signOut
+            createUserWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence
         } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -1088,6 +1088,14 @@
         }
 
         const auth = getAuth(firebaseApp);
+        // Explicit — keeps the session across browser closes/restarts on the same
+        // device. This is already the SDK default, but some embedded/in-app
+        // browsers (WhatsApp, Instagram) restrict storage and silently fall back
+        // to a memory-only session that dies the moment the tab closes; being
+        // explicit here at least rules out our own code as the cause.
+        setPersistence(auth, browserLocalPersistence).catch((err) => {
+            console.warn('Não foi possível configurar a persistência de login:', err);
+        });
         const guestsCol = collection(db, 'guests');
         const guestsQuery = query(guestsCol, orderBy('createdAt', 'desc'));
         const invitesCol = collection(db, 'invites');
@@ -1339,6 +1347,128 @@
             addressEl.textContent = `📍 ${eventSettings.address || 'Endereço a confirmar'}`;
             timeEl.textContent = `🕐 ${eventSettings.dateText} · ${eventSettings.timeText}`;
             transportEl.textContent = eventSettings.transportMessage;
+        }
+
+        // ---------- Ticket image (for sharing the actual ticket photo on WhatsApp) ----------
+        function loadImageAsync(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        function wrapCanvasText(ctx, text, maxWidth) {
+            const words = text.split(' ');
+            const lines = [];
+            let line = '';
+            words.forEach(word => {
+                const test = line ? line + ' ' + word : word;
+                if (ctx.measureText(test).width > maxWidth && line) {
+                    lines.push(line);
+                    line = word;
+                } else {
+                    line = test;
+                }
+            });
+            if (line) lines.push(line);
+            return lines;
+        }
+
+        async function buildTicketCanvas(guest) {
+            if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+            const W = 480;
+            const PAD = 36;
+            const contentW = W - PAD * 2;
+            const qrSize = 260;
+            const lineH = 20;
+
+            const measureCanvas = document.createElement('canvas');
+            const mctx = measureCanvas.getContext('2d');
+            mctx.font = '13px "Plus Jakarta Sans", sans-serif';
+            const addressLines = wrapCanvasText(mctx, `📍 ${eventSettings.address || 'Endereço a confirmar'}`, contentW - 40);
+
+            const logoImg = await loadImageAsync('assets/logo-wordmark.png').catch(() => null);
+            const qrContainer = document.createElement('div');
+            await renderQrWithLogo(qrContainer, guest.id, qrSize);
+            const qrCanvas = qrContainer.querySelector('canvas');
+
+            const logoH = 44;
+            const logoW = logoImg ? logoImg.width * (logoH / logoImg.height) : 0;
+            const infoLinesCount = 1 + addressLines.length + 1; // time + address + transport
+            const infoBoxH = infoLinesCount * lineH + 28;
+            const H = PAD + logoH + 28 + 30 + 22 + qrSize + 24 + infoBoxH + PAD;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = W;
+            canvas.height = H;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, W, H);
+            ctx.textAlign = 'center';
+
+            let y = PAD;
+            if (logoImg) ctx.drawImage(logoImg, (W - logoW) / 2, y, logoW, logoH);
+            y += logoH + 28;
+
+            ctx.fillStyle = '#1a1424';
+            ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText(guest.name, W / 2, y);
+            y += 30;
+
+            ctx.fillStyle = '#6b6379';
+            ctx.font = '13px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText(`${guest.ticketType} · ${guest.status}`, W / 2, y);
+            y += 22;
+
+            if (qrCanvas) ctx.drawImage(qrCanvas, (W - qrSize) / 2, y, qrSize, qrSize);
+            y += qrSize + 24;
+
+            ctx.fillStyle = '#f4f2f8';
+            const boxY = y;
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(PAD, boxY, contentW, infoBoxH, 14);
+            else ctx.rect(PAD, boxY, contentW, infoBoxH);
+            ctx.fill();
+
+            let ty = boxY + 24;
+            ctx.fillStyle = '#4a4458';
+            ctx.font = '13px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText(`🕐 ${eventSettings.dateText} · ${eventSettings.timeText}`, W / 2, ty);
+            ty += lineH;
+            addressLines.forEach(line => { ctx.fillText(line, W / 2, ty); ty += lineH; });
+            ctx.fillStyle = '#8d8598';
+            ctx.fillText(eventSettings.transportMessage, W / 2, ty);
+
+            return canvas;
+        }
+
+        async function shareTicketOnWhatsApp(guest, waLink, triggerBtn) {
+            const originalText = triggerBtn ? triggerBtn.textContent : '';
+            if (triggerBtn) { triggerBtn.disabled = true; triggerBtn.textContent = 'Preparando imagem...'; }
+            try {
+                const canvas = await buildTicketCanvas(guest);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const file = new File([blob], `ingresso-${guest.name.replace(/\s+/g, '-')}.png`, { type: 'image/png' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Ingresso Halloween Party',
+                        text: `Aqui está seu ingresso, ${guest.name}! Mostra esse QR na entrada.`
+                    });
+                    return;
+                }
+            } catch (err) {
+                if (err && err.name === 'AbortError') return; // user cancelled the share sheet
+                console.error('Falha ao gerar/compartilhar a imagem do ingresso:', err);
+            } finally {
+                if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.textContent = originalText; }
+            }
+            // Fallback for browsers without Web Share + file support (most desktops)
+            window.open(waLink, '_blank');
         }
 
         // ---------- Pop35 download + auto-copy coupon ----------
@@ -1869,7 +1999,7 @@
                 paymentStatusInput.disabled = false;
                 paymentStatusInput.style.opacity = '1';
 
-                showSuccessModal({ id: docRef.id, name, phone });
+                showSuccessModal({ id: docRef.id, name, phone, ticketType: category, status });
                 logActivity('add_guest', `Adicionou ${name}`);
             } catch (err) {
                 console.error(err);
@@ -1886,7 +2016,8 @@
             const link = `${location.origin}${location.pathname}?ticket=${guest.id}`;
             if (guest.phone) {
                 const msg = `Aqui está seu ingresso para a Halloween Party! Mostra esse link na entrada: ${link}`;
-                modalWhatsappBtn.href = `https://wa.me/55${guest.phone}?text=${encodeURIComponent(msg)}`;
+                const waLink = `https://wa.me/55${guest.phone}?text=${encodeURIComponent(msg)}`;
+                modalWhatsappBtn.onclick = () => shareTicketOnWhatsApp(guest, waLink, modalWhatsappBtn);
                 modalWhatsappBtn.classList.remove('hidden');
             } else {
                 modalWhatsappBtn.classList.add('hidden');
@@ -2059,7 +2190,8 @@
             const link = `${location.origin}${location.pathname}?ticket=${g.id}`;
             if (g.phone) {
                 const msg = `Aqui está seu ingresso para a Halloween Party! Mostra esse link na entrada: ${link}`;
-                ticketWhatsappBtn.href = `https://wa.me/55${g.phone}?text=${encodeURIComponent(msg)}`;
+                const waLink = `https://wa.me/55${g.phone}?text=${encodeURIComponent(msg)}`;
+                ticketWhatsappBtn.onclick = () => shareTicketOnWhatsApp(g, waLink, ticketWhatsappBtn);
                 ticketWhatsappBtn.classList.remove('hidden');
             } else {
                 ticketWhatsappBtn.classList.add('hidden');
