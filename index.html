@@ -716,6 +716,12 @@
 
                     <div id="inviteListContainer" class="flex flex-col gap-2"></div>
                 </div>
+
+                <div class="surface p-4 mt-4">
+                    <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-sub);">
+                        Usuários com Acesso</h3>
+                    <div id="usersListContainer" class="flex flex-col gap-2"></div>
+                </div>
             </section>
 
             <!-- BOTTOM NAV -->
@@ -924,6 +930,8 @@
         const guestsQuery = query(guestsCol, orderBy('createdAt', 'desc'));
         const invitesCol = collection(db, 'invites');
         const invitesQuery = query(invitesCol, orderBy('createdAt', 'desc'));
+        const usersCol = collection(db, 'users');
+        const usersQuery = query(usersCol, orderBy('createdAt', 'desc'));
         let currentUserEmail = null;
 
         // ---------- State ----------
@@ -981,6 +989,7 @@
         const inviteLinkOutput = document.getElementById('inviteLinkOutput');
         const copyInviteLinkBtn = document.getElementById('copyInviteLinkBtn');
         const inviteListContainer = document.getElementById('inviteListContainer');
+        const usersListContainer = document.getElementById('usersListContainer');
 
         const themeToggleBtn = document.getElementById('themeToggleBtn');
         const sunIcon = document.getElementById('sunIcon');
@@ -1076,6 +1085,10 @@
         onSnapshot(invitesQuery, (snapshot) => {
             renderInvites(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
         }, (error) => console.error('Erro ao carregar convites:', error));
+
+        onSnapshot(usersQuery, (snapshot) => {
+            renderUsers(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        }, (error) => console.error('Erro ao carregar usuários:', error));
 
         // ---------- Public ticket view (no login needed — guests open their QR link) ----------
         const ticketCodeFromUrl = new URLSearchParams(location.search).get('ticket');
@@ -1174,6 +1187,22 @@
         onAuthStateChanged(auth, async (user) => {
             if (ticketCodeFromUrl) return; // public ticket page — ignore auth entirely
             if (user) {
+                // Access was removed via "Usuários com Acesso"? Kick them out.
+                // If the check itself fails (e.g. offline with no cached doc), fail
+                // open — better a brief window of stale access than locking an
+                // admin out mid-event over a wifi hiccup.
+                try {
+                    const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+                    if (!userDocSnap.exists() || userDocSnap.data().disabled) {
+                        await signOut(auth);
+                        showLoginPane();
+                        loginError.textContent = 'Sua conta foi removida pelo administrador.';
+                        loginError.classList.remove('hidden');
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('Não foi possível verificar o status do usuário, liberando acesso.', err);
+                }
                 currentUserEmail = user.email;
                 authLoading.classList.add('hidden');
                 authScreen.classList.add('hidden');
@@ -1200,10 +1229,22 @@
             }
         });
 
+        registerName.addEventListener('blur', () => {
+            registerName.value = sanitizeName(registerName.value);
+        });
+
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             registerError.classList.add('hidden');
             if (!currentInvite) return;
+
+            const cleanName = sanitizeName(registerName.value);
+            if (!cleanName) {
+                registerError.textContent = 'Digite um nome válido (apenas letras).';
+                registerError.classList.remove('hidden');
+                registerName.focus();
+                return;
+            }
 
             const recheck = await checkInvite(currentInvite.code);
             if (!recheck.valid) {
@@ -1216,7 +1257,7 @@
             try {
                 const cred = await createUserWithEmailAndPassword(auth, registerEmail.value.trim(), registerPassword.value);
                 await setDoc(doc(db, 'users', cred.user.uid), {
-                    name: registerName.value.trim(),
+                    name: cleanName,
                     email: registerEmail.value.trim(),
                     role: 'admin',
                     createdAt: Date.now(),
@@ -1285,6 +1326,34 @@
             } catch (err) {
                 console.error(err);
                 alert('Não foi possível revogar o convite.');
+            }
+        };
+
+        function renderUsers(users) {
+            if (!users.length) {
+                usersListContainer.innerHTML = `<p class="text-xs" style="color: var(--text-faint);">Nenhum usuário cadastrado.</p>`;
+                return;
+            }
+            usersListContainer.innerHTML = users.map(u => {
+                const isSelf = !!(auth.currentUser && u.id === auth.currentUser.uid);
+                return `
+                    <div class="surface-soft p-3 flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold truncate">${escapeHtml(u.name || 'Sem nome')}${isSelf ? ' <span style="font-weight:500; color: var(--text-faint);">(você)</span>' : ''}</p>
+                            <p class="text-[10.5px] truncate" style="color: var(--text-faint);">${escapeHtml(u.email || '')} · ${escapeHtml(u.role || 'admin')}</p>
+                        </div>
+                        ${isSelf ? '' : `<button onclick="removeUser('${u.id}')" class="text-[10px] font-semibold px-2 py-1 rounded-lg shrink-0" style="color:#fb7185; background:rgba(251,113,133,0.1);">Remover</button>`}
+                    </div>`;
+            }).join('');
+        }
+
+        window.removeUser = async function (uid) {
+            if (!confirm('Remover o acesso desse usuário? Ele será desconectado na próxima verificação e não vai mais conseguir entrar. (O e-mail continua reservado no Firebase Auth — pra reutilizá-lo, apague também em Authentication no console do Firebase.)')) return;
+            try {
+                await deleteDoc(doc(db, 'users', uid));
+            } catch (err) {
+                console.error(err);
+                alert('Não foi possível remover o usuário. Verifique sua conexão.');
             }
         };
 
@@ -1362,10 +1431,14 @@
         });
 
         // ---------- Add guest ----------
+        guestNameInput.addEventListener('blur', () => {
+            guestNameInput.value = sanitizeName(guestNameInput.value);
+        });
+
         quickAddForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const name = guestNameInput.value.trim();
-            if (!name) return;
+            const name = sanitizeName(guestNameInput.value);
+            if (!name) { guestNameInput.focus(); return; }
 
             const category = ticketCategoryInput.value;
             const status = category === 'Cortesia' ? 'Cortesia' : paymentStatusInput.value;
@@ -1637,6 +1710,19 @@
             renderCheckin();
         });
 
+        // ---------- Name sanitization (cadastro de usuário + convidados) ----------
+        // Strips digits/symbols, collapses spaces, trims, and title-cases —
+        // "  joão3 da  SILVA99!" -> "João Da Silva"
+        function sanitizeName(str) {
+            return String(str || '')
+                .replace(/[0-9]/g, '')
+                .replace(/[^\p{L}\s'-]/gu, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase()
+                .replace(/(^|[\s'-])\p{L}/gu, c => c.toUpperCase());
+        }
+
         // ---------- Rendering ----------
         function matchesSearch(g, term) {
             if (!term) return true;
@@ -1877,7 +1963,7 @@
             return text.split('\n')
                 .map(line => {
                     const match = line.trim().match(/^\d+[.)\-]?\s*[-–—]?\s*(.+)$/);
-                    return match ? match[1].trim() : null;
+                    return match ? sanitizeName(match[1]) : null;
                 })
                 .filter(name => name && name.length > 1);
         }
