@@ -617,7 +617,15 @@
                             style="width:42px; height:42px; color:#8b5cf6;">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4v1m6 11h2m-6 0h-2v2m-4-13H6a2 2 0 00-2 2v2m14-4h2a2 2 0 012 2v2M4 16v2a2 2 0 002 2h2m10-4v2a2 2 0 01-2 2h-2M4 12h16M9 4h2v2H9V4zm4 0h2v2h-2V4zM9 18h2v2H9v-2z" />
+                                    d="M4 7V5.5A1.5 1.5 0 015.5 4H7" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 4h1.5A1.5 1.5 0 0120 5.5V7" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M20 17v1.5a1.5 1.5 0 01-1.5 1.5H17" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 20H5.5A1.5 1.5 0 014 18.5V17" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M4 12h16" />
                             </svg>
                         </button>
                     </div>
@@ -1080,7 +1088,8 @@
             dateText: '31 OUT',
             timeText: '19h às 05h',
             transportMessage: '🚗 Chame um POP35 até o sítio — cupom em breve!',
-            couponCode: ''
+            couponCode: '',
+            currentLote: 1
         };
 
         // ---------- State ----------
@@ -1105,7 +1114,6 @@
 
         let guests = [];
         let currentFilter = 'all';
-        let currentLote = parseInt(localStorage.getItem('halloween_current_lote'), 10) || 1;
 
         // ---------- DOM refs ----------
         const authLoading = document.getElementById('authLoading');
@@ -1287,6 +1295,7 @@
             if (document.activeElement !== settingsTime) settingsTime.value = eventSettings.timeText;
             if (document.activeElement !== settingsTransport) settingsTransport.value = eventSettings.transportMessage;
             if (document.activeElement !== settingsCoupon) settingsCoupon.value = eventSettings.couponCode;
+            setActiveLoteChip();
         }
 
         saveSettingsBtn.addEventListener('click', async () => {
@@ -1361,7 +1370,8 @@
             ban_guest: '🚫',
             unban_guest: '♻️',
             add_note: '📝',
-            update_settings: '⚙️'
+            update_settings: '⚙️',
+            change_lote: '🎟️'
         };
 
         function renderLogs(logs) {
@@ -1766,10 +1776,10 @@
             }
         }
 
-        // ---------- Lote selector ----------
+        // ---------- Lote selector (global — synced via Firestore, same for every admin) ----------
         function setActiveLoteChip() {
             loteChips.forEach(chip => {
-                const isActive = parseInt(chip.dataset.lote, 10) === currentLote;
+                const isActive = parseInt(chip.dataset.lote, 10) === eventSettings.currentLote;
                 chip.style.background = isActive ? '#8b5cf6' : 'var(--bg-input)';
                 chip.style.border = isActive ? '1px solid transparent' : '1px solid var(--border-color)';
                 chip.style.color = isActive ? '#fff' : 'var(--text-sub)';
@@ -1777,12 +1787,19 @@
         }
 
         function initLoteSelector() {
-            setActiveLoteChip();
             loteChips.forEach(chip => {
-                chip.addEventListener('click', () => {
-                    currentLote = parseInt(chip.dataset.lote, 10);
-                    localStorage.setItem('halloween_current_lote', String(currentLote));
+                chip.addEventListener('click', async () => {
+                    const newLote = parseInt(chip.dataset.lote, 10);
+                    if (newLote === eventSettings.currentLote) return;
+                    eventSettings.currentLote = newLote; // optimistic, snapshot confirms right after
                     setActiveLoteChip();
+                    try {
+                        await setDoc(eventSettingsRef, { currentLote: newLote }, { merge: true });
+                        logActivity('change_lote', `Mudou o lote atual para ${newLote}º`);
+                    } catch (err) {
+                        console.error(err);
+                        alert('Não foi possível trocar o lote. Verifique sua conexão.');
+                    }
                 });
             });
         }
@@ -1820,7 +1837,7 @@
                     phone,
                     ticketType: category,
                     status,
-                    lote: currentLote,
+                    lote: eventSettings.currentLote,
                     notes: guestNotesInput.value.trim(),
                     checkedIn: false,
                     checkinAt: null,
@@ -2432,7 +2449,7 @@
                     chunk.forEach((name, j) => {
                         const idx = start + j;
                         batch.set(doc(guestsCol), {
-                            name, phone: '', ticketType, status, lote: currentLote, notes: '',
+                            name, phone: '', ticketType, status, lote: eventSettings.currentLote, notes: '',
                             checkedIn: false, checkinAt: null, banned: false, banReason: '', checkinNote: '',
                             createdAt: base - idx
                         });
