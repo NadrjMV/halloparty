@@ -1467,8 +1467,20 @@
             } finally {
                 if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.textContent = originalText; }
             }
-            // Fallback for browsers without Web Share + file support (most desktops)
-            window.open(waLink, '_blank');
+            // Fallback for browsers without Web Share + file support (most desktops).
+            // With a phone on file we can deep-link straight into that chat; without
+            // one (or the guest just wasn't given a number) we copy the link instead
+            // so it can still be pasted into any WhatsApp chat by hand.
+            if (waLink) {
+                window.open(waLink, '_blank');
+            } else {
+                try {
+                    await navigator.clipboard.writeText(`${location.origin}${location.pathname}?ticket=${guest.id}`);
+                    showToast('Link do ingresso copiado! Cole no WhatsApp.');
+                } catch (err) {
+                    console.error(err);
+                }
+            }
         }
 
         // ---------- Pop35 download + auto-copy coupon ----------
@@ -2014,14 +2026,11 @@
             fillTicketInfoBlock(modalTicketAddress, modalTicketTime, modalTicketTransport);
 
             const link = `${location.origin}${location.pathname}?ticket=${guest.id}`;
-            if (guest.phone) {
-                const msg = `Aqui está seu ingresso para a Halloween Party! Mostra esse link na entrada: ${link}`;
-                const waLink = `https://wa.me/55${guest.phone}?text=${encodeURIComponent(msg)}`;
-                modalWhatsappBtn.onclick = () => shareTicketOnWhatsApp(guest, waLink, modalWhatsappBtn);
-                modalWhatsappBtn.classList.remove('hidden');
-            } else {
-                modalWhatsappBtn.classList.add('hidden');
-            }
+            const waLink = guest.phone
+                ? `https://wa.me/55${guest.phone}?text=${encodeURIComponent(`Aqui está seu ingresso para a Halloween Party! Mostra esse link na entrada: ${link}`)}`
+                : null;
+            modalWhatsappBtn.onclick = () => shareTicketOnWhatsApp(guest, waLink, modalWhatsappBtn);
+            modalWhatsappBtn.classList.remove('hidden');
             modalCopyLinkBtn.dataset.link = link;
 
             quickSuccessModal.classList.add('active');
@@ -2188,14 +2197,11 @@
             ticketModalName.textContent = g.name;
             fillTicketInfoBlock(ticketModalAddress, ticketModalTime, ticketModalTransport);
             const link = `${location.origin}${location.pathname}?ticket=${g.id}`;
-            if (g.phone) {
-                const msg = `Aqui está seu ingresso para a Halloween Party! Mostra esse link na entrada: ${link}`;
-                const waLink = `https://wa.me/55${g.phone}?text=${encodeURIComponent(msg)}`;
-                ticketWhatsappBtn.onclick = () => shareTicketOnWhatsApp(g, waLink, ticketWhatsappBtn);
-                ticketWhatsappBtn.classList.remove('hidden');
-            } else {
-                ticketWhatsappBtn.classList.add('hidden');
-            }
+            const waLink = g.phone
+                ? `https://wa.me/55${g.phone}?text=${encodeURIComponent(`Aqui está seu ingresso para a Halloween Party! Mostra esse link na entrada: ${link}`)}`
+                : null;
+            ticketWhatsappBtn.onclick = () => shareTicketOnWhatsApp(g, waLink, ticketWhatsappBtn);
+            ticketWhatsappBtn.classList.remove('hidden');
             ticketCopyBtn.dataset.link = link;
             ticketModal.classList.add('active');
             await renderQrWithLogo(ticketQrCanvas, g.id);
