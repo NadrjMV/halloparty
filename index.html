@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
@@ -311,301 +311,426 @@
     </style>
 </head>
 
-<body class="dark">
+<body>
 
-    <div id="syncBanner"
-        class="hidden fixed top-0 left-0 right-0 z-[60] text-center text-[11px] font-semibold py-2 px-4"
-        style="background:#fb7185; color:#fff;">
-        Sem conexão com o Firebase — os dados podem não estar sincronizados. Verifique as regras do Firestore.
+    <!-- AUTH LOADING -->
+    <div id="authLoading" class="fixed inset-0 z-[100] flex items-center justify-center"
+        style="background: var(--bg-main);">
+        <div class="flex flex-col items-center gap-4">
+            <img src="assets/favicon.png" alt=""
+                class="h-14 w-14 object-cover rounded-full opacity-90"
+                style="box-shadow: 0 4px 18px -6px rgba(139,92,246,0.4);">
+            <div class="w-5 h-5 rounded-full border-2 animate-spin"
+                style="border-color: var(--border-color); border-top-color:#8b5cf6;"></div>
+        </div>
     </div>
 
-    <div class="ambient-wash"></div>
-
-    <div class="app-shell px-4 pt-4">
-
-        <!-- Header -->
-        <header class="surface p-3 mb-4 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5 min-w-0">
-                <img src="assets/logo-wordmark.png" alt="Halloween Party" class="h-8 w-auto object-contain shrink-0">
-                <div class="min-w-0 hidden xs:block">
-                    <p class="text-[11px] font-medium leading-none" style="color: var(--text-faint);">31 OUT · 22H</p>
-                </div>
+    <!-- AUTH SCREEN (login / invite registration) -->
+    <div id="authScreen" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4 overflow-y-auto"
+        style="background: var(--bg-main);">
+        <div class="ambient-wash"></div>
+        <div class="w-full max-w-[360px] relative z-10 py-6">
+            <div class="flex flex-col items-center mb-6">
+                <img src="assets/favicon.png" alt="Halloween Party"
+                    class="h-20 w-20 object-cover rounded-full"
+                    style="box-shadow: 0 8px 24px -8px rgba(139,92,246,0.45); border: 3px solid var(--bg-card);">
             </div>
 
-            <button id="themeToggleBtn" aria-label="Alternar Tema"
-                class="p-2 rounded-full shrink-0 active:scale-95 transition-transform"
-                style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">
-                <svg id="sunIcon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                <svg id="moonIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-            </button>
-        </header>
-
-        <!-- Quick Status Row -->
-        <div class="grid grid-cols-3 gap-2 mb-5">
-            <div class="surface-soft py-2.5 flex flex-col items-center justify-center text-center">
-                <span id="statTotal" class="text-base font-bold leading-none">0</span>
-                <span class="text-[9.5px] font-medium mt-1" style="color: var(--text-faint);">Total</span>
-            </div>
-            <div class="surface-soft py-2.5 flex flex-col items-center justify-center text-center">
-                <span id="statCheckedIn" class="text-base font-bold leading-none" style="color:#22c55e;">0</span>
-                <span class="text-[9.5px] font-medium mt-1" style="color: var(--text-faint);">Na Festa</span>
-            </div>
-            <div class="surface-soft py-2.5 flex flex-col items-center justify-center text-center">
-                <span id="statPending" class="text-base font-bold leading-none" style="color:#eab308;">0</span>
-                <span class="text-[9.5px] font-medium mt-1" style="color: var(--text-faint);">Pendente</span>
-            </div>
-        </div>
-        <span id="statBanned" class="hidden">0</span>
-
-        <!-- TAB 1: ADD -->
-        <section id="tab-add" class="tab-content active">
-            <div class="surface p-4 mb-4">
-                <h2 class="text-sm font-semibold mb-3.5" style="color: var(--text-sub);">Adicionar Convidado</h2>
-
-                <form id="quickAddForm" class="flex flex-col gap-3" autocomplete="off">
-                    <div>
-                        <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
-                            for="guestName">Nome *</label>
-                        <input type="text" id="guestName" class="field-input w-full" placeholder="Ex: Lucas Henrique"
-                            required autofocus>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
-                            for="guestPhone">WhatsApp (opcional)</label>
-                        <input type="tel" id="guestPhone" class="field-input w-full" placeholder="(35) 99999-8888">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
-                                for="ticketCategory">Ingresso</label>
-                            <select id="ticketCategory" class="field-input w-full">
-                                <option value="Pista">Pista</option>
-                                <option value="Organizador">Organizador</option>
-                                <option value="Cortesia">Cortesia</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
-                                for="paymentStatus">Pagamento</label>
-                            <select id="paymentStatus" class="field-input w-full">
-                                <option value="Pago">Pago</option>
-                                <option value="Pendente">Pendente</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
-                            for="guestNotes">Fantasia / Observação</label>
-                        <input type="text" id="guestNotes" class="field-input w-full"
-                            placeholder="Ex: Fantasia de Coringa">
-                    </div>
-
-                    <button type="submit"
-                        class="btn-primary w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 mt-1">
-                        <svg class="w-4.5 h-4.5" width="18" height="18" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                                d="M12 4v16m8-8H4" />
-                        </svg>
-                        Adicionar à Lista
-                    </button>
+            <!-- LOGIN -->
+            <div id="loginPane" class="surface p-5">
+                <h2 class="text-base font-bold mb-1">Entrar</h2>
+                <p class="text-xs mb-4" style="color: var(--text-sub);">Acesso restrito — só quem tem cadastro.</p>
+                <form id="loginForm" class="flex flex-col gap-3" autocomplete="on">
+                    <input type="email" id="loginEmail" class="field-input w-full" placeholder="E-mail" required
+                        autocomplete="username">
+                    <input type="password" id="loginPassword" class="field-input w-full" placeholder="Senha" required
+                        autocomplete="current-password">
+                    <p id="loginError" class="hidden text-xs font-semibold" style="color:#fb7185;"></p>
+                    <button type="submit" id="loginSubmitBtn"
+                        class="btn-primary w-full py-3 rounded-xl font-semibold text-sm mt-1">Entrar</button>
                 </form>
             </div>
 
-            <!-- Guest listing below the add form — collapsible, starts minimized -->
-            <details id="addListDetails" class="surface-soft px-3.5 py-3">
-                <summary class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <h3 class="text-[13px] font-bold" style="color: var(--text-sub);">Convidados cadastrados</h3>
-                        <span id="addListCount" class="text-[11px] font-bold px-2 py-0.5 rounded-full"
-                            style="background: var(--bg-input); color: var(--text-sub);">0</span>
-                    </div>
-                    <svg class="chevron-icon w-4 h-4 transition-transform" style="color: var(--text-faint);" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </summary>
+            <!-- REGISTER (via invite) -->
+            <div id="registerPane" class="surface p-5 hidden">
+                <h2 class="text-base font-bold mb-1">Criar conta</h2>
+                <p id="registerInviteInfo" class="text-xs mb-4" style="color:#22c55e;">Convite válido.</p>
+                <form id="registerForm" class="flex flex-col gap-3" autocomplete="on">
+                    <input type="text" id="registerName" class="field-input w-full" placeholder="Seu nome" required
+                        autocomplete="name">
+                    <input type="email" id="registerEmail" class="field-input w-full" placeholder="E-mail" required
+                        autocomplete="username">
+                    <input type="password" id="registerPassword" class="field-input w-full"
+                        placeholder="Senha (mín. 6 caracteres)" required minlength="6" autocomplete="new-password">
+                    <p id="registerError" class="hidden text-xs font-semibold" style="color:#fb7185;"></p>
+                    <button type="submit" id="registerSubmitBtn"
+                        class="btn-primary w-full py-3 rounded-xl font-semibold text-sm mt-1">Criar conta</button>
+                </form>
+            </div>
 
-                <div class="mt-3">
-                    <div class="relative mb-2.5">
+            <!-- INVITE INVALID -->
+            <div id="inviteInvalidPane" class="surface p-5 hidden text-center">
+                <h2 class="text-base font-bold mb-1" style="color:#fb7185;">Convite inválido</h2>
+                <p class="text-xs" style="color: var(--text-sub);">Esse link expirou, já foi usado ou não existe.
+                    Peça um novo convite ao administrador.</p>
+            </div>
+
+            <button id="goToLoginBtn" class="hidden btn-ghost w-full py-2.5 rounded-xl font-semibold text-xs mt-3">Já
+                tem conta? Entrar</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="appRoot" class="hidden">
+
+        <div id="syncBanner"
+            class="hidden fixed top-0 left-0 right-0 z-[60] text-center text-[11px] font-semibold py-2 px-4"
+            style="background:#fb7185; color:#fff;">
+            Sem conexão com o Firebase — os dados podem não estar sincronizados. Verifique as regras do Firestore.
+        </div>
+
+        <div class="ambient-wash"></div>
+
+        <div class="app-shell px-4 pt-4">
+
+            <!-- Header -->
+            <header class="surface p-3 mb-4 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <img src="assets/favicon.png" alt="Halloween Party"
+                        class="h-9 w-9 object-cover rounded-full shrink-0"
+                        style="border: 2px solid var(--bg-card); box-shadow: 0 2px 10px -4px rgba(139,92,246,0.4);">
+                    <div class="min-w-0">
+                        <p class="text-sm font-bold leading-none truncate">Halloween Party</p>
+                        <p class="text-[11px] font-medium leading-none mt-1" style="color: var(--text-faint);">31 OUT
+                            · 22H</p>
+                    </div>
+                </div>
+
+                <button id="themeToggleBtn" aria-label="Alternar Tema"
+                    class="p-2 rounded-full shrink-0 active:scale-95 transition-transform"
+                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">
+                    <svg id="sunIcon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <svg id="moonIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+
+                <button id="logoutBtn" aria-label="Sair"
+                    class="p-2 rounded-full shrink-0 active:scale-95 transition-transform"
+                    style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </header>
+
+            <!-- Quick Status Row -->
+            <div class="grid grid-cols-3 gap-2 mb-5">
+                <div class="surface-soft py-2.5 flex flex-col items-center justify-center text-center">
+                    <span id="statTotal" class="text-base font-bold leading-none">0</span>
+                    <span class="text-[9.5px] font-medium mt-1" style="color: var(--text-faint);">Total</span>
+                </div>
+                <div class="surface-soft py-2.5 flex flex-col items-center justify-center text-center">
+                    <span id="statCheckedIn" class="text-base font-bold leading-none" style="color:#22c55e;">0</span>
+                    <span class="text-[9.5px] font-medium mt-1" style="color: var(--text-faint);">Na Festa</span>
+                </div>
+                <div class="surface-soft py-2.5 flex flex-col items-center justify-center text-center">
+                    <span id="statPending" class="text-base font-bold leading-none" style="color:#eab308;">0</span>
+                    <span class="text-[9.5px] font-medium mt-1" style="color: var(--text-faint);">Pendente</span>
+                </div>
+            </div>
+            <span id="statBanned" class="hidden">0</span>
+
+            <!-- TAB 1: ADD -->
+            <section id="tab-add" class="tab-content active">
+                <div class="surface p-4 mb-4">
+                    <h2 class="text-sm font-semibold mb-3.5" style="color: var(--text-sub);">Adicionar Convidado</h2>
+
+                    <form id="quickAddForm" class="flex flex-col gap-3" autocomplete="off">
+                        <div>
+                            <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
+                                for="guestName">Nome *</label>
+                            <input type="text" id="guestName" class="field-input w-full"
+                                placeholder="Ex: Lucas Henrique" required autofocus>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
+                                for="guestPhone">WhatsApp (opcional)</label>
+                            <input type="tel" id="guestPhone" class="field-input w-full" placeholder="(35) 99999-8888">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
+                                    for="ticketCategory">Ingresso</label>
+                                <select id="ticketCategory" class="field-input w-full">
+                                    <option value="Pista">Pista</option>
+                                    <option value="Organizador">Organizador</option>
+                                    <option value="Cortesia">Cortesia</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
+                                    for="paymentStatus">Pagamento</label>
+                                <select id="paymentStatus" class="field-input w-full">
+                                    <option value="Pago">Pago</option>
+                                    <option value="Pendente">Pendente</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
+                                for="guestNotes">Fantasia / Observação</label>
+                            <input type="text" id="guestNotes" class="field-input w-full"
+                                placeholder="Ex: Fantasia de Coringa">
+                        </div>
+
+                        <button type="submit"
+                            class="btn-primary w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 mt-1">
+                            <svg class="w-4.5 h-4.5" width="18" height="18" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            Adicionar à Lista
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Guest listing below the add form — collapsible, starts minimized -->
+                <details id="addListDetails" class="surface-soft px-3.5 py-3">
+                    <summary class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-[13px] font-bold" style="color: var(--text-sub);">Convidados cadastrados
+                            </h3>
+                            <span id="addListCount" class="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                                style="background: var(--bg-input); color: var(--text-sub);">0</span>
+                        </div>
+                        <svg class="chevron-icon w-4 h-4 transition-transform" style="color: var(--text-faint);"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </summary>
+
+                    <div class="mt-3">
+                        <div class="relative mb-2.5">
+                            <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
+                                style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input type="text" id="addSearchInput" class="field-input w-full pl-10 text-sm"
+                                placeholder="Buscar na lista...">
+                        </div>
+
+                        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 mb-3">
+                            <button data-filter="all"
+                                class="filter-chip active-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                                style="background:#8b5cf6; color:#fff;">Todos</button>
+                            <button data-filter="Pista"
+                                class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                                style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Pista</button>
+                            <button data-filter="Organizador"
+                                class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                                style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Organizador</button>
+                            <button data-filter="Cortesia"
+                                class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                                style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Cortesia</button>
+                            <button data-filter="Pago"
+                                class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                                style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Pagos</button>
+                            <button data-filter="Pendente"
+                                class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                                style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Pendentes</button>
+                            <button data-filter="Banido"
+                                class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                                style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Banidos</button>
+                        </div>
+
+                        <div id="addListContainer" class="flex flex-col gap-2"></div>
+                    </div>
+                </details>
+            </section>
+
+            <!-- TAB 2: CHECK-IN / PORTARIA -->
+            <section id="tab-checkin" class="tab-content">
+                <div class="surface-soft p-3 mb-3.5">
+                    <div class="relative">
                         <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
                             style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                        <input type="text" id="addSearchInput" class="field-input w-full pl-10 text-sm"
-                            placeholder="Buscar na lista...">
+                        <input type="text" id="checkinSearchInput" class="field-input w-full pl-10 text-sm"
+                            placeholder="Buscar por nome, telefone ou fantasia...">
                     </div>
-
-                    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 mb-3">
-                        <button data-filter="all"
-                            class="filter-chip active-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
-                            style="background:#8b5cf6; color:#fff;">Todos</button>
-                        <button data-filter="Pista"
-                            class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
-                            style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Pista</button>
-                        <button data-filter="Organizador"
-                            class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
-                            style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Organizador</button>
-                        <button data-filter="Cortesia"
-                            class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
-                            style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Cortesia</button>
-                        <button data-filter="Pago"
-                            class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
-                            style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Pagos</button>
-                        <button data-filter="Pendente"
-                            class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
-                            style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Pendentes</button>
-                        <button data-filter="Banido"
-                            class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
-                            style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Banidos</button>
-                    </div>
-
-                    <div id="addListContainer" class="flex flex-col gap-2"></div>
                 </div>
-            </details>
-        </section>
+                <div id="checkinContainer" class="flex flex-col gap-3"></div>
+            </section>
 
-        <!-- TAB 2: CHECK-IN / PORTARIA -->
-        <section id="tab-checkin" class="tab-content">
-            <div class="surface-soft p-3 mb-3.5">
-                <div class="relative">
-                    <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2" style="color: var(--text-faint);"
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input type="text" id="checkinSearchInput" class="field-input w-full pl-10 text-sm"
-                        placeholder="Buscar por nome, telefone ou fantasia...">
-                </div>
-            </div>
-            <div id="checkinContainer" class="flex flex-col gap-3"></div>
-        </section>
+            <!-- TAB 3: STATS -->
+            <section id="tab-stats" class="tab-content">
+                <div class="surface p-4 mb-4">
+                    <h2 class="text-sm font-semibold mb-4" style="color: var(--text-sub);">Resumo do Evento</h2>
 
-        <!-- TAB 3: STATS -->
-        <section id="tab-stats" class="tab-content">
-            <div class="surface p-4 mb-4">
-                <h2 class="text-sm font-semibold mb-4" style="color: var(--text-sub);">Resumo do Evento</h2>
-
-                <div class="mb-5">
-                    <div class="flex justify-between text-xs font-semibold mb-1.5">
-                        <span style="color: var(--text-sub);">Check-ins confirmados</span>
-                        <span id="progressText" style="color:#22c55e;">0 / 0</span>
+                    <div class="mb-5">
+                        <div class="flex justify-between text-xs font-semibold mb-1.5">
+                            <span style="color: var(--text-sub);">Check-ins confirmados</span>
+                            <span id="progressText" style="color:#22c55e;">0 / 0</span>
+                        </div>
+                        <div class="w-full h-2.5 rounded-full overflow-hidden"
+                            style="background: var(--bg-input); border: 1px solid var(--border-color);">
+                            <div id="progressBar" class="h-full rounded-full transition-all duration-500"
+                                style="width:0%; background: linear-gradient(90deg,#22c55e,#15803d);"></div>
+                        </div>
                     </div>
-                    <div class="w-full h-2.5 rounded-full overflow-hidden"
-                        style="background: var(--bg-input); border: 1px solid var(--border-color);">
-                        <div id="progressBar" class="h-full rounded-full transition-all duration-500"
-                            style="width:0%; background: linear-gradient(90deg,#22c55e,#15803d);"></div>
+
+                    <div class="text-sm divide-y" style="border-color: var(--border-color);">
+                        <div class="flex justify-between items-center py-2.5">
+                            <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
+                                    class="w-2 h-2 rounded-full" style="background:#8b5cf6;"></span>Ingressos
+                                Pista</span>
+                            <span id="breakdownPista" class="font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2.5">
+                            <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
+                                    class="w-2 h-2 rounded-full" style="background:#ff6a1a;"></span>Organizadores</span>
+                            <span id="breakdownVip" class="font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2.5">
+                            <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
+                                    class="w-2 h-2 rounded-full" style="background:#ec4899;"></span>Cortesias</span>
+                            <span id="breakdownBackstage" class="font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2.5">
+                            <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
+                                    class="w-2 h-2 rounded-full" style="background:#eab308;"></span>Pagamentos
+                                Pendentes</span>
+                            <span id="breakdownPending" class="font-bold" style="color:#eab308;">0</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2.5">
+                            <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
+                                    class="w-2 h-2 rounded-full" style="background:#fb7185;"></span>Banidos</span>
+                            <span id="breakdownBanned" class="font-bold" style="color:#fb7185;">0</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="text-sm divide-y" style="border-color: var(--border-color);">
-                    <div class="flex justify-between items-center py-2.5">
-                        <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
-                                class="w-2 h-2 rounded-full" style="background:#8b5cf6;"></span>Ingressos Pista</span>
-                        <span id="breakdownPista" class="font-bold">0</span>
+                <div class="surface p-4">
+                    <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-sub);">
+                        Gerenciamento de Dados</h3>
+                    <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+                        <button id="importListBtn"
+                            class="btn-ghost p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                            </svg>
+                            Importar Lista
+                        </button>
+                        <button id="exportCsvBtn"
+                            class="btn-ghost p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Exportar Lista
+                        </button>
                     </div>
-                    <div class="flex justify-between items-center py-2.5">
-                        <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
-                                class="w-2 h-2 rounded-full" style="background:#ff6a1a;"></span>Organizadores</span>
-                        <span id="breakdownVip" class="font-bold">0</span>
-                    </div>
-                    <div class="flex justify-between items-center py-2.5">
-                        <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
-                                class="w-2 h-2 rounded-full" style="background:#ec4899;"></span>Cortesias</span>
-                        <span id="breakdownBackstage" class="font-bold">0</span>
-                    </div>
-                    <div class="flex justify-between items-center py-2.5">
-                        <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
-                                class="w-2 h-2 rounded-full" style="background:#eab308;"></span>Pagamentos
-                            Pendentes</span>
-                        <span id="breakdownPending" class="font-bold" style="color:#eab308;">0</span>
-                    </div>
-                    <div class="flex justify-between items-center py-2.5">
-                        <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
-                                class="w-2 h-2 rounded-full" style="background:#fb7185;"></span>Banidos</span>
-                        <span id="breakdownBanned" class="font-bold" style="color:#fb7185;">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="surface p-4">
-                <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-sub);">
-                    Gerenciamento de Dados</h3>
-                <div class="grid grid-cols-2 gap-2.5 mb-2.5">
-                    <button id="importListBtn"
-                        class="btn-ghost p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                    <button id="clearAllBtn"
+                        class="btn-ghost-danger w-full p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        Importar Lista
-                    </button>
-                    <button id="exportCsvBtn"
-                        class="btn-ghost p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        Exportar Lista
+                        Limpar Tudo
                     </button>
                 </div>
-                <button id="clearAllBtn"
-                    class="btn-ghost-danger w-full p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Limpar Tudo
-                </button>
-            </div>
-        </section>
 
-        <!-- BOTTOM NAV -->
-        <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto p-2">
-            <div class="rounded-2xl p-1.5 flex items-center justify-around backdrop-blur-xl"
-                style="background-color: var(--nav-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 16px -8px rgba(0,0,0,0.25);">
+                <div class="surface p-4 mt-4">
+                    <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-sub);">
+                        Convites de Acesso</h3>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
+                                for="inviteMaxUses">Usos</label>
+                            <input type="number" id="inviteMaxUses" class="field-input w-full" value="1" min="1"
+                                max="200">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
+                                for="inviteExpiry">Expira em</label>
+                            <select id="inviteExpiry" class="field-input w-full">
+                                <option value="1">1 dia</option>
+                                <option value="3">3 dias</option>
+                                <option value="7" selected>7 dias</option>
+                                <option value="30">30 dias</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="generateInviteBtn"
+                        class="btn-primary w-full py-2.5 rounded-xl font-semibold text-xs mb-3">Gerar Link de
+                        Convite</button>
 
-                <button data-tab="tab-add"
-                    class="nav-btn is-active flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                    <span class="text-[10px] flex items-center gap-1">Adicionar<span
-                            class="nav-dot w-1 h-1 rounded-full" style="background:#ff6a1a;"></span></span>
-                </button>
+                    <div id="inviteLinkResult" class="hidden mb-3">
+                        <p class="text-[11px] font-semibold mb-1" style="color: var(--text-sub);">Link gerado — copie e
+                            envie:</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="inviteLinkOutput" class="field-input w-full text-xs" readonly>
+                            <button id="copyInviteLinkBtn"
+                                class="btn-ghost px-3 rounded-xl text-xs font-bold shrink-0">Copiar</button>
+                        </div>
+                    </div>
 
-                <button data-tab="tab-checkin"
-                    class="nav-btn flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span class="text-[10px]">Check-in</span>
-                </button>
+                    <div id="inviteListContainer" class="flex flex-col gap-2"></div>
+                </div>
+            </section>
 
-                <button data-tab="tab-stats"
-                    class="nav-btn flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                    </svg>
-                    <span class="text-[10px]">Métricas</span>
-                </button>
-            </div>
-        </nav>
+            <!-- BOTTOM NAV -->
+            <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto p-2">
+                <div class="rounded-2xl p-1.5 flex items-center justify-around backdrop-blur-xl"
+                    style="background-color: var(--nav-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 16px -8px rgba(0,0,0,0.25);">
+
+                    <button data-tab="tab-add"
+                        class="nav-btn is-active flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                        <span class="text-[10px] flex items-center gap-1">Adicionar<span
+                                class="nav-dot w-1 h-1 rounded-full" style="background:#ff6a1a;"></span></span>
+                    </button>
+
+                    <button data-tab="tab-checkin"
+                        class="nav-btn flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="text-[10px]">Check-in</span>
+                    </button>
+
+                    <button data-tab="tab-stats"
+                        class="nav-btn flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                        </svg>
+                        <span class="text-[10px]">Métricas</span>
+                    </button>
+                </div>
+            </nav>
+
+        </div>
 
     </div>
 
@@ -676,8 +801,12 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
         import {
             getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
-            onSnapshot, query, orderBy, writeBatch
+            onSnapshot, query, orderBy, writeBatch, getDoc, setDoc, increment
         } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+        import {
+            getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+            createUserWithEmailAndPassword, signOut
+        } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC_lVD-Y-63BKO6BaYy4er9MKQCzTEpKdE",
@@ -690,8 +819,12 @@
 
         const firebaseApp = initializeApp(firebaseConfig);
         const db = getFirestore(firebaseApp);
+        const auth = getAuth(firebaseApp);
         const guestsCol = collection(db, 'guests');
         const guestsQuery = query(guestsCol, orderBy('createdAt', 'desc'));
+        const invitesCol = collection(db, 'invites');
+        const invitesQuery = query(invitesCol, orderBy('createdAt', 'desc'));
+        let currentUserEmail = null;
 
         // ---------- State ----------
         function migrateGuest(g) {
@@ -715,6 +848,38 @@
         let autoModalTimer = null;
 
         // ---------- DOM refs ----------
+        const authLoading = document.getElementById('authLoading');
+        const authScreen = document.getElementById('authScreen');
+        const appRoot = document.getElementById('appRoot');
+
+        const loginPane = document.getElementById('loginPane');
+        const loginForm = document.getElementById('loginForm');
+        const loginEmail = document.getElementById('loginEmail');
+        const loginPassword = document.getElementById('loginPassword');
+        const loginError = document.getElementById('loginError');
+        const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+
+        const registerPane = document.getElementById('registerPane');
+        const registerForm = document.getElementById('registerForm');
+        const registerName = document.getElementById('registerName');
+        const registerEmail = document.getElementById('registerEmail');
+        const registerPassword = document.getElementById('registerPassword');
+        const registerError = document.getElementById('registerError');
+        const registerSubmitBtn = document.getElementById('registerSubmitBtn');
+        const registerInviteInfo = document.getElementById('registerInviteInfo');
+
+        const inviteInvalidPane = document.getElementById('inviteInvalidPane');
+        const goToLoginBtn = document.getElementById('goToLoginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        const inviteMaxUses = document.getElementById('inviteMaxUses');
+        const inviteExpiry = document.getElementById('inviteExpiry');
+        const generateInviteBtn = document.getElementById('generateInviteBtn');
+        const inviteLinkResult = document.getElementById('inviteLinkResult');
+        const inviteLinkOutput = document.getElementById('inviteLinkOutput');
+        const copyInviteLinkBtn = document.getElementById('copyInviteLinkBtn');
+        const inviteListContainer = document.getElementById('inviteListContainer');
+
         const themeToggleBtn = document.getElementById('themeToggleBtn');
         const sunIcon = document.getElementById('sunIcon');
         const moonIcon = document.getElementById('moonIcon');
@@ -783,6 +948,219 @@
             syncBanner.classList.remove('hidden');
         });
 
+        onSnapshot(invitesQuery, (snapshot) => {
+            renderInvites(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        }, (error) => console.error('Erro ao carregar convites:', error));
+
+        // ---------- Auth (cadastro fechado por convite) ----------
+        const inviteCodeFromUrl = new URLSearchParams(location.search).get('invite');
+        let currentInvite = null;
+
+        async function checkInvite(code) {
+            if (!code) return { valid: false, reason: 'missing' };
+            try {
+                const snap = await getDoc(doc(db, 'invites', code));
+                if (!snap.exists()) return { valid: false, reason: 'not_found' };
+                const data = snap.data();
+                if (!data.active) return { valid: false, reason: 'inactive' };
+                if (data.expiresAt && Date.now() > data.expiresAt) return { valid: false, reason: 'expired' };
+                if (data.usedCount >= data.maxUses) return { valid: false, reason: 'exhausted' };
+                return { valid: true, data };
+            } catch (err) {
+                console.error(err);
+                return { valid: false, reason: 'error' };
+            }
+        }
+
+        function showLoginPane() {
+            loginPane.classList.remove('hidden');
+            registerPane.classList.add('hidden');
+            inviteInvalidPane.classList.add('hidden');
+            goToLoginBtn.classList.add('hidden');
+        }
+
+        async function showAuthScreen() {
+            authLoading.classList.add('hidden');
+            appRoot.classList.add('hidden');
+            authScreen.classList.remove('hidden');
+
+            if (!inviteCodeFromUrl) {
+                showLoginPane();
+                return;
+            }
+
+            const result = await checkInvite(inviteCodeFromUrl);
+            if (result.valid) {
+                currentInvite = { code: inviteCodeFromUrl, data: result.data };
+                loginPane.classList.add('hidden');
+                inviteInvalidPane.classList.add('hidden');
+                registerPane.classList.remove('hidden');
+                goToLoginBtn.classList.remove('hidden');
+                const remaining = result.data.maxUses - result.data.usedCount;
+                registerInviteInfo.textContent = `Convite válido — ${remaining} uso${remaining === 1 ? '' : 's'} restante${remaining === 1 ? '' : 's'}.`;
+            } else {
+                loginPane.classList.add('hidden');
+                registerPane.classList.add('hidden');
+                inviteInvalidPane.classList.remove('hidden');
+                goToLoginBtn.classList.remove('hidden');
+            }
+        }
+
+        goToLoginBtn.addEventListener('click', () => {
+            history.replaceState({}, '', location.pathname);
+            showLoginPane();
+        });
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUserEmail = user.email;
+                authLoading.classList.add('hidden');
+                authScreen.classList.add('hidden');
+                appRoot.classList.remove('hidden');
+            } else {
+                currentUserEmail = null;
+                await showAuthScreen();
+            }
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginError.classList.add('hidden');
+            loginSubmitBtn.disabled = true;
+            try {
+                await signInWithEmailAndPassword(auth, loginEmail.value.trim(), loginPassword.value);
+                loginForm.reset();
+            } catch (err) {
+                console.error(err);
+                loginError.textContent = 'E-mail ou senha inválidos.';
+                loginError.classList.remove('hidden');
+            } finally {
+                loginSubmitBtn.disabled = false;
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            registerError.classList.add('hidden');
+            if (!currentInvite) return;
+
+            const recheck = await checkInvite(currentInvite.code);
+            if (!recheck.valid) {
+                registerPane.classList.add('hidden');
+                inviteInvalidPane.classList.remove('hidden');
+                return;
+            }
+
+            registerSubmitBtn.disabled = true;
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, registerEmail.value.trim(), registerPassword.value);
+                await setDoc(doc(db, 'users', cred.user.uid), {
+                    name: registerName.value.trim(),
+                    email: registerEmail.value.trim(),
+                    role: 'admin',
+                    createdAt: Date.now(),
+                    invitedBy: currentInvite.code
+                });
+                await updateDoc(doc(db, 'invites', currentInvite.code), { usedCount: increment(1) });
+                history.replaceState({}, '', location.pathname);
+                registerForm.reset();
+            } catch (err) {
+                console.error(err);
+                registerError.textContent = err.code === 'auth/email-already-in-use'
+                    ? 'Esse e-mail já tem cadastro. Clique em "Já tem conta? Entrar".'
+                    : 'Não foi possível criar a conta. Tente novamente.';
+                registerError.classList.remove('hidden');
+            } finally {
+                registerSubmitBtn.disabled = false;
+            }
+        });
+
+        logoutBtn.addEventListener('click', async () => {
+            if (!confirm('Sair da conta?')) return;
+            try {
+                await signOut(auth);
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        // ---------- Invite management ----------
+        function inviteStatus(inv) {
+            const expired = inv.expiresAt && Date.now() > inv.expiresAt;
+            const exhausted = inv.usedCount >= inv.maxUses;
+            if (!inv.active) return { label: 'Revogado', dead: true };
+            if (expired) return { label: 'Expirado', dead: true };
+            if (exhausted) return { label: 'Esgotado', dead: true };
+            return { label: 'Ativo', dead: false };
+        }
+
+        function renderInvites(invites) {
+            if (!invites.length) {
+                inviteListContainer.innerHTML = `<p class="text-xs" style="color: var(--text-faint);">Nenhum convite gerado ainda.</p>`;
+                return;
+            }
+            inviteListContainer.innerHTML = invites.map(inv => {
+                const st = inviteStatus(inv);
+                const color = st.dead ? '#fb7185' : '#22c55e';
+                const expiresText = inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString('pt-BR') : '—';
+                return `
+                    <div class="surface-soft p-3 flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold truncate">${inv.usedCount}/${inv.maxUses} usos · expira ${expiresText}</p>
+                            <p class="text-[10.5px] truncate" style="color: var(--text-faint);">criado por ${escapeHtml(inv.createdBy || '—')}</p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="color:${color}; background:${color}22;">${st.label}</span>
+                            ${!st.dead ? `<button onclick="revokeInvite('${inv.id}')" class="text-[10px] font-semibold underline" style="color: var(--text-faint);">revogar</button>` : ''}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        window.revokeInvite = async function (code) {
+            if (!confirm('Revogar este convite? O link deixará de funcionar.')) return;
+            try {
+                await updateDoc(doc(db, 'invites', code), { active: false });
+            } catch (err) {
+                console.error(err);
+                alert('Não foi possível revogar o convite.');
+            }
+        };
+
+        generateInviteBtn.addEventListener('click', async () => {
+            generateInviteBtn.disabled = true;
+            try {
+                const code = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+                const maxUses = Math.max(1, parseInt(inviteMaxUses.value, 10) || 1);
+                const days = parseInt(inviteExpiry.value, 10);
+                await setDoc(doc(db, 'invites', code), {
+                    maxUses,
+                    usedCount: 0,
+                    active: true,
+                    createdAt: Date.now(),
+                    createdBy: currentUserEmail || 'desconhecido',
+                    expiresAt: Date.now() + days * 24 * 60 * 60 * 1000
+                });
+                inviteLinkOutput.value = `${location.origin}${location.pathname}?invite=${code}`;
+                inviteLinkResult.classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                alert('Não foi possível gerar o convite. Verifique sua conexão.');
+            } finally {
+                generateInviteBtn.disabled = false;
+            }
+        });
+
+        copyInviteLinkBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(inviteLinkOutput.value);
+                copyInviteLinkBtn.textContent = 'Copiado!';
+                setTimeout(() => { copyInviteLinkBtn.textContent = 'Copiar'; }, 1500);
+            } catch {
+                inviteLinkOutput.select();
+            }
+        });
+
         // ---------- Theme ----------
         ticketCategoryInput.addEventListener('change', () => {
             if (ticketCategoryInput.value === 'Cortesia') {
@@ -803,7 +1181,7 @@
         });
 
         function initTheme() {
-            const saved = localStorage.getItem('halloween_theme') || 'dark';
+            const saved = localStorage.getItem('halloween_theme') || 'light';
             if (saved === 'light') {
                 document.body.classList.add('light-theme');
                 sunIcon.classList.remove('hidden');
