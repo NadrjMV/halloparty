@@ -774,6 +774,14 @@
                             Exportar Lista
                         </button>
                     </div>
+                    <button id="shareListBtn"
+                        class="btn-primary w-full p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform mb-2.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.684 13.342a3 3 0 100-2.684m0 2.684a3 3 0 100 2.684m0-2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684zm0 12a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                        Compartilhar Lista
+                    </button>
                     <button id="clearAllBtn"
                         class="btn-ghost-danger w-full p-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -975,6 +983,35 @@
                 <button id="importConfirmBtn" class="btn-primary flex-1 py-2.5 rounded-xl font-bold text-xs" disabled
                     style="opacity:0.5;">Importar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- SHARE LIST MODAL -->
+    <div id="shareListModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+        style="background: var(--scrim); backdrop-filter: blur(4px);">
+        <div class="modal-box surface p-5 max-w-[360px] w-full">
+            <h3 class="text-base font-bold mb-1">Compartilhar Lista</h3>
+            <p class="text-xs mb-3" style="color: var(--text-sub);">Só ingressos Pista, com status de pagamento.
+                Organizadores nunca entram.</p>
+
+            <label class="flex items-center gap-2 mb-3 text-xs font-semibold cursor-pointer select-none"
+                style="color: var(--text-sub);">
+                <input type="checkbox" id="shareListIncludeCortesia" class="w-4 h-4 rounded"
+                    style="accent-color: #8b5cf6;">
+                Incluir cortesias
+            </label>
+
+            <textarea id="shareListPreview" class="field-input w-full text-xs mb-3" rows="9" readonly
+                style="font-family: ui-monospace, monospace;"></textarea>
+
+            <div class="flex gap-2">
+                <button id="shareListCopyBtn" class="btn-ghost flex-1 py-2.5 rounded-xl font-semibold text-xs">Copiar
+                    Lista</button>
+                <button id="shareListWhatsappBtn"
+                    class="btn-approve flex-1 py-2.5 rounded-xl font-semibold text-xs">Enviar por WhatsApp</button>
+            </div>
+            <button id="shareListCloseBtn"
+                class="btn-ghost w-full py-2.5 rounded-xl font-semibold text-xs mt-2">Fechar</button>
         </div>
     </div>
 
@@ -1244,6 +1281,14 @@
 
         const exportCsvBtn = document.getElementById('exportCsvBtn');
         const clearAllBtn = document.getElementById('clearAllBtn');
+
+        const shareListBtn = document.getElementById('shareListBtn');
+        const shareListModal = document.getElementById('shareListModal');
+        const shareListIncludeCortesia = document.getElementById('shareListIncludeCortesia');
+        const shareListPreview = document.getElementById('shareListPreview');
+        const shareListCopyBtn = document.getElementById('shareListCopyBtn');
+        const shareListWhatsappBtn = document.getElementById('shareListWhatsappBtn');
+        const shareListCloseBtn = document.getElementById('shareListCloseBtn');
 
         const importListBtn = document.getElementById('importListBtn');
         const importModal = document.getElementById('importModal');
@@ -2509,6 +2554,56 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;');
         }
+
+        // ---------- Share list (Pista only, name + payment status) ----------
+        function buildShareListText() {
+            const includeCortesia = shareListIncludeCortesia.checked;
+            // Plain A-Z here — when cortesia is included it merges into one single
+            // alphabetical list with pista, not a separate block after it.
+            const eligible = guests
+                .filter(g => g.ticketType === 'Pista' || (includeCortesia && g.ticketType === 'Cortesia'))
+                .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+            const lines = eligible.map((g, i) => {
+                // Cortesia is free by definition — always shows as settled, never pending
+                const emoji = (g.status === 'Pago' || g.status === 'Cortesia') ? '🟢' : '🟠';
+                return `${i + 1}. ${g.name} ${emoji}`;
+            });
+            const header = `🎃 LISTA — HALLOWEEN PARTY${includeCortesia ? '' : ''} 🎃\n\n`;
+            const footer = `\n\n🟢 Pago · 🟠 Pendente`;
+            return lines.length
+                ? header + lines.join('\n') + footer
+                : header + '(nenhum convidado ainda)';
+        }
+
+        function refreshShareListPreview() {
+            shareListPreview.value = buildShareListText();
+        }
+
+        shareListBtn.addEventListener('click', () => {
+            refreshShareListPreview();
+            shareListModal.classList.add('active');
+        });
+
+        shareListIncludeCortesia.addEventListener('change', refreshShareListPreview);
+
+        shareListCloseBtn.addEventListener('click', () => {
+            shareListModal.classList.remove('active');
+        });
+
+        shareListCopyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(shareListPreview.value);
+                showToast('Lista copiada!');
+            } catch (err) {
+                console.error(err);
+                shareListPreview.select();
+            }
+        });
+
+        shareListWhatsappBtn.addEventListener('click', () => {
+            const url = `https://wa.me/?text=${encodeURIComponent(shareListPreview.value)}`;
+            window.open(url, '_blank');
+        });
 
         // ---------- Data tools ----------
         exportCsvBtn.addEventListener('click', () => {
