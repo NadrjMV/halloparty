@@ -2378,9 +2378,15 @@
         // staff never loses their place — approve/reject, then straight back to
         // scanning the next person.
         let qrScanner = null;
-        let scanSheetOpen = false; // guards against new frames firing while the sheet is up —
         // deliberately NOT using html5-qrcode's own pause()/resume(), since pause(true)
         // draws its own "Scanner paused" overlay in English with no translation hook
+        let sheetGuestId = null; // id currently shown in the sheet (or '__invalid__'); null once closed —
+        // while it's set, new scans are ignored (with a toast) so the admin resolves
+        // one guest at a time instead of the sheet swapping out from under them
+        let lastScannedId = null;
+        let lastScannedAt = 0;
+        const RESCAN_COOLDOWN_MS = 2500; // suppresses re-reading the SAME still-visible
+        // code right after closing the sheet, before the phone's had a chance to move
 
         async function startScanner() {
             scannerStatusText.textContent = 'Aponte a câmera para o QR do convidado.';
@@ -2410,15 +2416,27 @@
         }
 
         function onScanSuccess(decodedText) {
-            if (scanSheetOpen) return; // ignore new frames while a result is on screen
+            if (sheetGuestId) {
+                // A sheet is already up — make the door staff resolve that person
+                // (approve/reject/ban) before a new one can replace it. Give a
+                // clear signal instead of silently doing nothing.
+                showToast('Finalize a ação atual antes de ler outro QR');
+                return;
+            }
+            const now = Date.now();
+            if (decodedText === lastScannedId && now - lastScannedAt < RESCAN_COOLDOWN_MS) return; // same code still in frame
+            lastScannedId = decodedText;
+            lastScannedAt = now;
+
             const guest = guests.find(g => g.id === decodedText);
-            scanSheetOpen = true;
 
             if (!guest) {
+                sheetGuestId = '__invalid__';
                 if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
                 openScanResultSheet(buildScanSheetInvalid());
                 return;
             }
+            sheetGuestId = guest.id;
             if (guest.banned) {
                 if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
                 openScanResultSheet(buildScanSheetBanned(guest));
@@ -2434,7 +2452,14 @@
 
         function closeScanResultSheet() {
             scanResultSheet.classList.remove('is-open');
-            scanSheetOpen = false;
+            scanResultSheetBody.innerHTML = ''; // belt-and-suspenders: nothing left to
+            // interact with even if the slide-down transition were somehow stuck
+            sheetGuestId = null;
+            // Restart the cooldown from *now* — if the admin took a while to read
+            // the sheet before acting, the original 2.5s window (from when it was
+            // first scanned) may already be gone, and the phone is likely still
+            // pointed at the same code right as it closes.
+            lastScannedAt = Date.now();
         }
         window.closeScanResultSheet = closeScanResultSheet;
 
@@ -2595,6 +2620,8 @@
         };
 
         openScannerBtn.addEventListener('click', () => {
+            lastScannedId = null;
+            sheetGuestId = null;
             scannerModal.classList.add('active');
             startScanner();
         });
@@ -2603,7 +2630,7 @@
             stopScanner();
             scannerModal.classList.remove('active');
             scanResultSheet.classList.remove('is-open');
-            scanSheetOpen = false;
+            sheetGuestId = null;
         });
 
         // ---------- Name sanitization (cadastro de usuário + convidados) ----------
