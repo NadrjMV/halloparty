@@ -315,23 +315,96 @@
 
         /* Toast */
         #toast {
-            transform: translate(-50%, 12px);
+            transform: translate(-50%, 10px) scale(0.94);
             opacity: 0;
-            transition: transform 0.2s ease, opacity 0.2s ease;
+            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
         }
 
         #toast.toast-visible {
-            transform: translate(-50%, 0);
+            transform: translate(-50%, 0) scale(1);
             opacity: 1;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #toast {
+                transition: opacity 0.15s ease;
+                transform: translate(-50%, 0) scale(1);
+            }
+        }
+
+        /* QR scanner viewfinder */
+        .scan-viewfinder {
+            width: 190px;
+            height: 190px;
+            position: relative;
+        }
+
+        .scan-viewfinder .corner {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border: 3px solid #8b5cf6;
+        }
+
+        .scan-viewfinder .corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 8px 0 0 0; }
+        .scan-viewfinder .corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 8px 0 0; }
+        .scan-viewfinder .corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 8px; }
+        .scan-viewfinder .corner.br { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 8px 0; }
+
+        .scan-line {
+            position: absolute;
+            left: 8px;
+            right: 8px;
+            height: 2px;
+            top: 10%;
+            background: linear-gradient(90deg, transparent, #ff6a1a, transparent);
+            box-shadow: 0 0 12px 1px rgba(255, 106, 26, 0.7);
+            animation: scanSweep 2.4s ease-in-out infinite;
+        }
+
+        @keyframes scanSweep {
+
+            0%,
+            100% {
+                top: 10%;
+                opacity: 0.3;
+            }
+
+            50% {
+                top: 88%;
+                opacity: 1;
+            }
+        }
+
+        #scanResultSheet {
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #scanResultSheet.is-open {
+            transform: translateY(0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .scan-line {
+                animation: none;
+                top: 50%;
+                opacity: 0.8;
+            }
+
+            #scanResultSheet {
+                transition: none;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <div id="toast"
-        class="hidden fixed bottom-24 left-1/2 z-[300] text-xs font-semibold px-4 py-2.5 rounded-full text-center"
-        style="background: #1a1424; color: #fff; box-shadow: 0 8px 24px -8px rgba(0,0,0,0.5); max-width: 90vw;">
+    <div id="toast" class="hidden fixed bottom-24 left-1/2 z-[300] flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-full"
+        style="background: #17121f; box-shadow: 0 12px 30px -8px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06); max-width: 90vw;">
+        <span id="toastIcon" class="shrink-0 flex items-center justify-center rounded-full" style="width:20px; height:20px;"></span>
+        <span id="toastMsg" class="text-[13px] font-semibold" style="color:#fff;"></span>
     </div>
 
     <!-- AUTH LOADING -->
@@ -645,16 +718,6 @@
                             </svg>
                         </button>
                     </div>
-                </div>
-
-                <div id="scanResultBanner"
-                    class="hidden surface-soft p-2.5 mb-3 flex items-center justify-between gap-2"
-                    style="border-color: rgba(139,92,246,0.3);">
-                    <span class="text-xs font-semibold flex items-center gap-1.5" style="color:#8b5cf6;">
-                        Resultado do QR Code
-                    </span>
-                    <button id="clearScanBtn" class="text-[11px] font-semibold underline"
-                        style="color: var(--text-faint);">limpar</button>
                 </div>
 
                 <div id="checkinContainer" class="flex flex-col gap-3"></div>
@@ -1041,22 +1104,44 @@
         </div>
     </div>
 
-    <!-- QR SCANNER MODAL -->
-    <div id="scannerModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
-        style="background: var(--scrim); backdrop-filter: blur(4px);">
-        <div class="modal-box surface p-5 max-w-[340px] w-full">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-base font-bold">Escanear QR Code</h3>
-                <button id="scannerCloseBtn" aria-label="Fechar" style="color: var(--text-faint);">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+    <!-- QR SCANNER MODAL — full screen, camera fills everything below the header -->
+    <div id="scannerModal" class="modal-backdrop fixed inset-0 z-50 flex flex-col" style="background: #05040a;">
+        <div class="flex items-center justify-between p-4 shrink-0"
+            style="background: rgba(5,4,10,0.85); backdrop-filter: blur(6px);">
+            <h3 class="text-base font-bold" style="color:#fff;">Escanear QR Code</h3>
+            <button id="scannerCloseBtn" aria-label="Fechar"
+                class="p-1.5 rounded-full" style="color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.08);">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="relative flex-1" style="background:#05040a;">
+            <div id="qrReaderContainer" class="absolute inset-0"></div>
+
+            <div class="absolute inset-0 flex items-center justify-center" style="pointer-events:none;">
+                <div class="scan-viewfinder">
+                    <span class="corner tl"></span>
+                    <span class="corner tr"></span>
+                    <span class="corner bl"></span>
+                    <span class="corner br"></span>
+                    <span class="scan-line"></span>
+                </div>
             </div>
-            <div id="qrReaderContainer" class="rounded-xl overflow-hidden" style="background:#000;"></div>
-            <p id="scannerStatusText" class="text-xs mt-3 text-center" style="color: var(--text-faint);">Aponte a
-                câmera para o QR do convidado.</p>
+
+            <p id="scannerStatusText" class="absolute left-0 right-0 text-center text-[13px] font-semibold px-6"
+                style="bottom:28px; color: rgba(255,255,255,0.7); pointer-events:none;">Aponte a câmera para o QR do
+                convidado.</p>
+
+            <!-- Result sheet — slides up over the camera, no tab navigation -->
+            <div id="scanResultSheet" class="absolute inset-x-0 bottom-0"
+                style="background: var(--bg-card); border-radius: 26px 26px 0 0; max-height: 85%; overflow-y: auto;">
+                <div class="w-9 h-1 rounded-full mx-auto mt-2.5 mb-3" style="background: var(--border-color-strong);">
+                </div>
+                <div id="scanResultSheetBody" class="px-5 pb-6"></div>
+            </div>
         </div>
     </div>
 
@@ -1144,6 +1229,19 @@
         const logsQuery = query(logsCol, orderBy('at', 'desc'), limit(50));
         let currentUserEmail = null;
 
+        // Races a Firestore read against a timeout so a dead/absent connection
+        // can never hang the UI forever — the venue may have no internet at all,
+        // so every network read that gates something the user is looking at needs
+        // a way out. Writes don't need this: they apply to the local cache and
+        // resolve/re-render instantly regardless of connectivity, so we never
+        // await a write just to drive UI feedback (see approveEntry etc.).
+        function withTimeout(promise, ms = 4000) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+            ]);
+        }
+
         let eventSettings = {
             address: '',
             dateText: '31 OUT',
@@ -1222,6 +1320,8 @@
         const saveSettingsBtn = document.getElementById('saveSettingsBtn');
         const headerEventTime = document.getElementById('headerEventTime');
         const toastEl = document.getElementById('toast');
+        const toastIcon = document.getElementById('toastIcon');
+        const toastMsg = document.getElementById('toastMsg');
 
         const modalTicketQr = document.getElementById('modalTicketQr');
         const modalTicketAddress = document.getElementById('modalTicketAddress');
@@ -1306,8 +1406,8 @@
         const scannerCloseBtn = document.getElementById('scannerCloseBtn');
         const qrReaderContainer = document.getElementById('qrReaderContainer');
         const scannerStatusText = document.getElementById('scannerStatusText');
-        const scanResultBanner = document.getElementById('scanResultBanner');
-        const clearScanBtn = document.getElementById('clearScanBtn');
+        const scanResultSheet = document.getElementById('scanResultSheet');
+        const scanResultSheetBody = document.getElementById('scanResultSheetBody');
 
         const ticketModal = document.getElementById('ticketModal');
         const ticketModalName = document.getElementById('ticketModalName');
@@ -1367,25 +1467,17 @@
             setActiveLoteChip();
         }
 
-        saveSettingsBtn.addEventListener('click', async () => {
-            saveSettingsBtn.disabled = true;
-            try {
-                await setDoc(eventSettingsRef, {
-                    address: settingsAddress.value.trim(),
-                    dateText: settingsDate.value.trim() || '31 OUT',
-                    timeText: settingsTime.value.trim() || '19h às 05h',
-                    transportMessage: settingsTransport.value.trim() || eventSettings.transportMessage,
-                    couponCode: settingsCoupon.value.trim()
-                }, { merge: true });
-                saveSettingsBtn.textContent = 'Salvo!';
-                setTimeout(() => { saveSettingsBtn.textContent = 'Salvar Configurações'; }, 1500);
-                logActivity('update_settings', 'Atualizou as configurações do evento');
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível salvar as configurações. Verifique sua conexão.');
-            } finally {
-                saveSettingsBtn.disabled = false;
-            }
+        saveSettingsBtn.addEventListener('click', () => {
+            safeWrite(() => setDoc(eventSettingsRef, {
+                address: settingsAddress.value.trim(),
+                dateText: settingsDate.value.trim() || '31 OUT',
+                timeText: settingsTime.value.trim() || '19h às 05h',
+                transportMessage: settingsTransport.value.trim() || eventSettings.transportMessage,
+                couponCode: settingsCoupon.value.trim()
+            }, { merge: true }), 'Não foi possível salvar as configurações.');
+            saveSettingsBtn.textContent = 'Salvo!';
+            setTimeout(() => { saveSettingsBtn.textContent = 'Salvar Configurações'; }, 1500);
+            logActivity('update_settings', 'Atualizou as configurações do evento');
         });
 
         function fillTicketInfoBlock(addressEl, timeEl, transportEl) {
@@ -1543,16 +1635,28 @@
         });
 
         // ---------- Toast ----------
+        const TOAST_ICONS = {
+            success: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0a0f0a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>`,
+            info: ''
+        };
+
         let toastTimer = null;
-        function showToast(message) {
-            toastEl.textContent = message;
+        function showToast(message, variant = 'info') {
+            toastMsg.textContent = message;
+            if (variant === 'success') {
+                toastIcon.style.background = '#22c55e';
+                toastIcon.innerHTML = TOAST_ICONS.success;
+                toastIcon.classList.remove('hidden');
+            } else {
+                toastIcon.classList.add('hidden');
+            }
             toastEl.classList.remove('hidden');
             requestAnimationFrame(() => toastEl.classList.add('toast-visible'));
             clearTimeout(toastTimer);
             toastTimer = setTimeout(() => {
                 toastEl.classList.remove('toast-visible');
                 setTimeout(() => toastEl.classList.add('hidden'), 250);
-            }, 2200);
+            }, 2600);
         }
 
         // ---------- Activity log ----------
@@ -1663,7 +1767,7 @@
 
         async function loadPublicTicket(id) {
             try {
-                const snap = await getDoc(doc(db, 'guests', id));
+                const snap = await withTimeout(getDoc(doc(db, 'guests', id)), 4000);
                 if (!snap.exists()) throw new Error('not_found');
                 const g = migrateGuest({ id: snap.id, ...snap.data() });
                 ticketViewName.textContent = g.name;
@@ -1692,7 +1796,7 @@
         async function checkInvite(code) {
             if (!code) return { valid: false, reason: 'missing' };
             try {
-                const snap = await getDoc(doc(db, 'invites', code));
+                const snap = await withTimeout(getDoc(doc(db, 'invites', code)), 4000);
                 if (!snap.exists()) return { valid: false, reason: 'not_found' };
                 const data = snap.data();
                 if (!data.active) return { valid: false, reason: 'inactive' };
@@ -1752,7 +1856,7 @@
                 // open — better a brief window of stale access than locking an
                 // admin out mid-event over a wifi hiccup.
                 try {
-                    const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+                    const userDocSnap = await withTimeout(getDoc(doc(db, 'users', user.uid)), 4000);
                     if (!userDocSnap.exists() || userDocSnap.data().disabled) {
                         await signOut(auth);
                         showLoginPane();
@@ -1879,14 +1983,9 @@
             }).join('');
         }
 
-        window.revokeInvite = async function (code) {
+        window.revokeInvite = function (code) {
             if (!confirm('Revogar este convite? O link deixará de funcionar.')) return;
-            try {
-                await updateDoc(doc(db, 'invites', code), { active: false });
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível revogar o convite.');
-            }
+            safeWrite(() => updateDoc(doc(db, 'invites', code), { active: false }), 'Não foi possível revogar o convite.');
         };
 
         function renderUsers(users) {
@@ -1907,38 +2006,25 @@
             }).join('');
         }
 
-        window.removeUser = async function (uid) {
+        window.removeUser = function (uid) {
             if (!confirm('Remover o acesso desse usuário? Ele será desconectado na próxima verificação e não vai mais conseguir entrar. (O e-mail continua reservado no Firebase Auth — pra reutilizá-lo, apague também em Authentication no console do Firebase.)')) return;
-            try {
-                await deleteDoc(doc(db, 'users', uid));
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível remover o usuário. Verifique sua conexão.');
-            }
+            safeWrite(() => deleteDoc(doc(db, 'users', uid)), 'Não foi possível remover o usuário.');
         };
 
-        generateInviteBtn.addEventListener('click', async () => {
-            generateInviteBtn.disabled = true;
-            try {
-                const code = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-                const maxUses = Math.max(1, parseInt(inviteMaxUses.value, 10) || 1);
-                const days = parseInt(inviteExpiry.value, 10);
-                await setDoc(doc(db, 'invites', code), {
-                    maxUses,
-                    usedCount: 0,
-                    active: true,
-                    createdAt: Date.now(),
-                    createdBy: currentUserEmail || 'desconhecido',
-                    expiresAt: Date.now() + days * 24 * 60 * 60 * 1000
-                });
-                inviteLinkOutput.value = `${location.origin}${location.pathname}?invite=${code}`;
-                inviteLinkResult.classList.remove('hidden');
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível gerar o convite. Verifique sua conexão.');
-            } finally {
-                generateInviteBtn.disabled = false;
-            }
+        generateInviteBtn.addEventListener('click', () => {
+            const code = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+            const maxUses = Math.max(1, parseInt(inviteMaxUses.value, 10) || 1);
+            const days = parseInt(inviteExpiry.value, 10);
+            safeWrite(() => setDoc(doc(db, 'invites', code), {
+                maxUses,
+                usedCount: 0,
+                active: true,
+                createdAt: Date.now(),
+                createdBy: currentUserEmail || 'desconhecido',
+                expiresAt: Date.now() + days * 24 * 60 * 60 * 1000
+            }), 'Não foi possível gerar o convite.');
+            inviteLinkOutput.value = `${location.origin}${location.pathname}?invite=${code}`;
+            inviteLinkResult.classList.remove('hidden');
         });
 
         copyInviteLinkBtn.addEventListener('click', async () => {
@@ -1991,18 +2077,13 @@
 
         function initLoteSelector() {
             loteChips.forEach(chip => {
-                chip.addEventListener('click', async () => {
+                chip.addEventListener('click', () => {
                     const newLote = parseInt(chip.dataset.lote, 10);
                     if (newLote === eventSettings.currentLote) return;
                     eventSettings.currentLote = newLote; // optimistic, snapshot confirms right after
                     setActiveLoteChip();
-                    try {
-                        await setDoc(eventSettingsRef, { currentLote: newLote }, { merge: true });
-                        logActivity('change_lote', `Mudou o lote atual para ${newLote}º`);
-                    } catch (err) {
-                        console.error(err);
-                        alert('Não foi possível trocar o lote. Verifique sua conexão.');
-                    }
+                    safeWrite(() => setDoc(eventSettingsRef, { currentLote: newLote }, { merge: true }), 'Não foi possível trocar o lote.');
+                    logActivity('change_lote', `Mudou o lote atual para ${newLote}º`);
                 });
             });
         }
@@ -2023,33 +2104,37 @@
             guestNameInput.value = sanitizeName(guestNameInput.value);
         });
 
-        quickAddForm.addEventListener('submit', async (e) => {
+        quickAddForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const name = sanitizeName(guestNameInput.value);
             if (!name) { guestNameInput.focus(); return; }
 
             const category = ticketCategoryInput.value;
             const status = category === 'Cortesia' ? 'Cortesia' : paymentStatusInput.value;
-            const submitBtn = quickAddForm.querySelector('button[type="submit"]');
+            const phone = guestPhoneInput.value.replace(/\D/g, '');
 
-            submitBtn.disabled = true;
+            // doc() mints the id locally (no network needed) so the ticket/QR can
+            // be shown immediately; setDoc() is fire-and-forget — see the note
+            // above window.togglePayment for why we never await guest writes.
+            const docRef = doc(guestsCol);
+            const guestData = {
+                name,
+                phone,
+                ticketType: category,
+                status,
+                lote: eventSettings.currentLote,
+                notes: guestNotesInput.value.trim(),
+                checkedIn: false,
+                checkinAt: null,
+                banned: false,
+                banReason: '',
+                checkinNote: '',
+                createdAt: Date.now()
+            };
+
             try {
-                const phone = guestPhoneInput.value.replace(/\D/g, '');
-                const docRef = await addDoc(guestsCol, {
-                    name,
-                    phone,
-                    ticketType: category,
-                    status,
-                    lote: eventSettings.currentLote,
-                    notes: guestNotesInput.value.trim(),
-                    checkedIn: false,
-                    checkinAt: null,
-                    banned: false,
-                    banReason: '',
-                    checkinNote: '',
-                    createdAt: Date.now()
-                });
-
+                safeWrite(() => setDoc(docRef, guestData), 'Não foi possível salvar o convidado.');
+            } finally {
                 guestNameInput.value = '';
                 guestPhoneInput.value = '';
                 guestNotesInput.value = '';
@@ -2058,11 +2143,6 @@
 
                 showSuccessModal({ id: docRef.id, name, phone, ticketType: category, status });
                 logActivity('add_guest', `Adicionou ${name}`);
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível salvar o convidado. Verifique sua conexão e tente novamente.');
-            } finally {
-                submitBtn.disabled = false;
             }
         });
 
@@ -2121,94 +2201,127 @@
             });
         });
 
-        // ---------- Guest actions (all write straight to Firestore; the live
-        // listener above re-renders once the change comes back down) ----------
-        window.togglePayment = async function (id) {
+        // ---------- Guest actions ----------
+        // These deliberately do NOT await the Firestore write before giving
+        // feedback. With offline persistence on, a write applies to the local
+        // cache (and the onSnapshot listener re-renders) instantly whether or
+        // not there's internet — the network sync happens transparently in the
+        // background. Awaiting the write's own promise would mean the button
+        // stays stuck and no sound/toast ever fires until the wifi comes back,
+        // which is exactly the freeze the venue's spotty internet would cause.
+        // .catch() still reports genuine failures (e.g. a permission error),
+        // which — unlike "no internet" — do reject quickly.
+        function reportWriteError(err, message) {
+            console.error(err);
+            alert(message);
+        }
+
+        // Dispatches a Firestore write without ever throwing back into the
+        // caller — if doc()/updateDoc() itself blows up synchronously for any
+        // reason (bad ref, SDK hiccup, whatever), the rest of the click handler
+        // — the toast, the sound, closing the sheet — must still run. A write
+        // that merely can't reach the server yet is not an error here; only a
+        // genuine failure (caught by the .catch, or thrown synchronously) is.
+        function safeWrite(run, errorMessage) {
+            try {
+                const result = run();
+                if (result && typeof result.catch === 'function') {
+                    result.catch(err => reportWriteError(err, errorMessage));
+                }
+            } catch (err) {
+                reportWriteError(err, errorMessage);
+            }
+        }
+
+        window.togglePayment = function (id) {
             const g = guests.find(x => x.id === id);
             if (!g || g.ticketType === 'Cortesia') return;
-            try {
-                await updateDoc(doc(db, 'guests', id), { status: g.status === 'Pago' ? 'Pendente' : 'Pago' });
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível atualizar o pagamento. Verifique sua conexão.');
-            }
+            safeWrite(
+                () => updateDoc(doc(db, 'guests', id), { status: g.status === 'Pago' ? 'Pendente' : 'Pago' }),
+                'Não foi possível atualizar o pagamento.'
+            );
         };
 
-        window.removeGuest = async function (id) {
+        window.removeGuest = function (id) {
             const g = guests.find(x => x.id === id);
             if (!confirm('Deseja remover este convidado da lista?')) return;
-            try {
-                await deleteDoc(doc(db, 'guests', id));
-                logActivity('remove_guest', `Removeu ${g ? g.name : id}`);
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível remover o convidado. Verifique sua conexão.');
-            }
+            safeWrite(() => deleteDoc(doc(db, 'guests', id)), 'Não foi possível remover o convidado.');
+            logActivity('remove_guest', `Removeu ${g ? g.name : id}`);
         };
 
-        window.approveEntry = async function (id) {
+        window.approveEntry = function (id) {
             const g = guests.find(x => x.id === id);
             if (!g || g.banned) return;
-            try {
-                if (g.checkedIn) {
-                    await updateDoc(doc(db, 'guests', id), { checkedIn: false, checkinAt: null, checkedInBy: '' });
-                    logActivity('undo_entry', `Desfez a entrada de ${g.name}`);
-                } else {
-                    await updateDoc(doc(db, 'guests', id), {
+            if (g.checkedIn) {
+                safeWrite(
+                    () => updateDoc(doc(db, 'guests', id), { checkedIn: false, checkinAt: null, checkedInBy: '' }),
+                    'Não foi possível desfazer a entrada.'
+                );
+                logActivity('undo_entry', `Desfez a entrada de ${g.name}`);
+            } else {
+                safeWrite(
+                    () => updateDoc(doc(db, 'guests', id), {
                         checkedIn: true, checkinAt: Date.now(), checkedInBy: currentUserEmail || ''
-                    });
-                    playApproveFeedback();
-                    logActivity('approve_entry', `Aprovou a entrada de ${g.name}`);
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível confirmar a entrada. Verifique sua conexão.');
+                    }),
+                    'Não foi possível confirmar a entrada.'
+                );
+                try { playApproveFeedback(); } catch (err) { console.error(err); }
+                showToast(`${g.name} — entrada confirmada`, 'success');
+                logActivity('approve_entry', `Aprovou a entrada de ${g.name}`);
             }
         };
 
-        window.banGuest = async function (id) {
+        window.banGuest = function (id) {
             const g = guests.find(x => x.id === id);
             if (!g) return;
-            try {
-                if (g.banned) {
-                    if (!confirm('Remover o banimento deste convidado?')) return;
-                    await updateDoc(doc(db, 'guests', id), { banned: false, banReason: '', bannedBy: '' });
-                    logActivity('unban_guest', `Removeu o banimento de ${g.name}`);
-                    return;
-                }
-                if (!confirm('Banir este convidado? Ele não poderá ter a entrada aprovada.')) return;
-                const reason = prompt('Motivo do banimento (opcional):', '') || '';
-                await updateDoc(doc(db, 'guests', id), {
-                    banned: true, banReason: reason.trim(), bannedBy: currentUserEmail || '',
-                    checkedIn: false, checkinAt: null, checkedInBy: ''
-                });
-                logActivity('ban_guest', `Baniu ${g.name}${reason.trim() ? ` (${reason.trim()})` : ''}`);
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível atualizar o banimento. Verifique sua conexão.');
+            if (g.banned) {
+                if (!confirm('Remover o banimento deste convidado?')) return;
+                safeWrite(
+                    () => updateDoc(doc(db, 'guests', id), { banned: false, banReason: '', bannedBy: '' }),
+                    'Não foi possível remover o banimento.'
+                );
+                logActivity('unban_guest', `Removeu o banimento de ${g.name}`);
+                return;
             }
+            if (!confirm('Banir este convidado? Ele não poderá ter a entrada aprovada.')) return;
+            const reason = (prompt('Motivo do banimento (opcional):', '') || '').trim();
+            safeWrite(
+                () => updateDoc(doc(db, 'guests', id), {
+                    banned: true, banReason: reason, bannedBy: currentUserEmail || '',
+                    checkedIn: false, checkinAt: null, checkedInBy: ''
+                }),
+                'Não foi possível banir o convidado.'
+            );
+            logActivity('ban_guest', `Baniu ${g.name}${reason ? ` (${reason})` : ''}`);
         };
 
         // Short two-tone chime (Web Audio, no file needed — works offline) + vibration
+        // Short ascending major-triad chime (C6-E6-G6) — reads as an unambiguous
+        // "confirmed" sound without being harsh, plus a brief vibration.
         function playApproveFeedback() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const now = ctx.currentTime;
-                [660, 880].forEach((freq, i) => {
+                const master = ctx.createGain();
+                master.gain.value = 0.22;
+                master.connect(ctx.destination);
+
+                [1046.5, 1318.5, 1568].forEach((freq, i) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
-                    osc.type = 'sine';
+                    osc.type = 'triangle';
                     osc.frequency.value = freq;
-                    const start = now + i * 0.09;
+                    const start = now + i * 0.07;
+                    const peak = i === 2 ? 0.9 : 0.6;
                     gain.gain.setValueAtTime(0.0001, start);
-                    gain.gain.exponentialRampToValueAtTime(0.2, start + 0.01);
-                    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
-                    osc.connect(gain).connect(ctx.destination);
+                    gain.gain.exponentialRampToValueAtTime(peak, start + 0.015);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.32);
+                    osc.connect(gain).connect(master);
                     osc.start(start);
-                    osc.stop(start + 0.2);
+                    osc.stop(start + 0.34);
                 });
             } catch (err) { /* audio not available, ignore */ }
-            if (navigator.vibrate) navigator.vibrate(120);
+            if (navigator.vibrate) navigator.vibrate([60, 30, 90]);
         }
 
         window.toggleNoteRow = function (id) {
@@ -2221,18 +2334,13 @@
             }
         };
 
-        window.saveCheckinNote = async function (id, value) {
+        window.saveCheckinNote = function (id, value) {
             const g = guests.find(x => x.id === id);
             if (!g) return;
             const note = value.trim();
             if (note === g.checkinNote) return;
-            try {
-                await updateDoc(doc(db, 'guests', id), { checkinNote: note });
-                if (note) logActivity('add_note', `Anotou em ${g.name}: "${note}"`);
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível salvar a observação. Verifique sua conexão.');
-            }
+            safeWrite(() => updateDoc(doc(db, 'guests', id), { checkinNote: note }), 'Não foi possível salvar a observação.');
+            if (note) logActivity('add_note', `Anotou em ${g.name}: "${note}"`);
         };
 
         // ---------- QR ticket modal (generate + share) ----------
@@ -2266,16 +2374,22 @@
         });
 
         // ---------- QR scanner (portaria) ----------
+        // The sheet slides up right over the camera (no tab switch) so the door
+        // staff never loses their place — approve/reject, then straight back to
+        // scanning the next person.
         let qrScanner = null;
+        let scanSheetOpen = false; // guards against new frames firing while the sheet is up —
+        // deliberately NOT using html5-qrcode's own pause()/resume(), since pause(true)
+        // draws its own "Scanner paused" overlay in English with no translation hook
 
         async function startScanner() {
             scannerStatusText.textContent = 'Aponte a câmera para o QR do convidado.';
-            scannerStatusText.style.color = 'var(--text-faint)';
+            scannerStatusText.style.color = 'rgba(255,255,255,0.65)';
             try {
                 qrScanner = new Html5Qrcode('qrReaderContainer');
                 await qrScanner.start(
                     { facingMode: 'environment' },
-                    { fps: 10, qrbox: { width: 220, height: 220 } },
+                    { fps: 10 },
                     onScanSuccess,
                     () => { /* per-frame scan miss, ignore */ }
                 );
@@ -2296,17 +2410,178 @@
         }
 
         function onScanSuccess(decodedText) {
-            stopScanner();
-            scannerModal.classList.remove('active');
+            if (scanSheetOpen) return; // ignore new frames while a result is on screen
             const guest = guests.find(g => g.id === decodedText);
+            scanSheetOpen = true;
+
             if (!guest) {
-                alert('QR não reconhecido — esse convidado não está na lista.');
+                if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+                openScanResultSheet(buildScanSheetInvalid());
                 return;
             }
-            scannedGuestId = decodedText;
-            document.querySelector('[data-tab="tab-checkin"]').click();
-            renderCheckin();
+            if (guest.banned) {
+                if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+                openScanResultSheet(buildScanSheetBanned(guest));
+            } else {
+                openScanResultSheet(buildScanSheetValid(guest));
+            }
         }
+
+        function openScanResultSheet(html) {
+            scanResultSheetBody.innerHTML = html;
+            scanResultSheet.classList.add('is-open');
+        }
+
+        function closeScanResultSheet() {
+            scanResultSheet.classList.remove('is-open');
+            scanSheetOpen = false;
+        }
+        window.closeScanResultSheet = closeScanResultSheet;
+
+        function buildScanSheetInvalid() {
+            return `
+                <div class="flex flex-col items-center text-center pt-1">
+                    <div class="w-14 h-14 rounded-full flex items-center justify-center mb-3.5" style="background: rgba(251,113,133,0.13); color:#fb7185;">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-bold mb-1.5">QR não reconhecido</h3>
+                    <p class="text-xs mb-5" style="color: var(--text-sub); max-width:26ch;">Esse código não corresponde a nenhum convidado da lista.</p>
+                    <button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3.5 rounded-2xl font-extrabold text-sm">Tentar de novo</button>
+                </div>`;
+        }
+
+        function buildScanSheetBanned(guest) {
+            const initial = (guest.name.trim()[0] || '?').toUpperCase();
+            return `
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-base shrink-0" style="background: rgba(251,113,133,0.15); color:#fb7185; border:1.5px solid rgba(251,113,133,0.3);">${initial}</div>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-bold truncate">${escapeHtml(guest.name)}</h3>
+                        <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-full" style="${ticketBadgeClasses(guest.ticketType)}">${guest.ticketType}</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2 p-3 rounded-2xl mb-4 text-xs font-semibold" style="background: rgba(251,113,133,0.1); border:1px solid rgba(251,113,133,0.25); color:#fb7185;">
+                    <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 11-12.728 0m12.728 0A9 9 0 015.636 18.364m12.728-12.728L5.636 18.364" />
+                    </svg>
+                    <span>Banido${guest.banReason ? ' — ' + escapeHtml(guest.banReason) : ''}. Não deve entrar.</span>
+                </div>
+                <button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3.5 rounded-2xl font-extrabold text-sm">Ok, entendi</button>
+                <div class="flex justify-center mt-3.5">
+                    <button onclick="scanSheetUnban('${guest.id}')" class="text-[11.5px] font-bold" style="color: var(--text-faint);">Remover banimento</button>
+                </div>`;
+        }
+
+        function buildScanSheetValid(guest) {
+            const initial = (guest.name.trim()[0] || '?').toUpperCase();
+            const alreadyIn = guest.checkedIn;
+            const timeStr = guest.checkinAt ? new Date(guest.checkinAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+            const approveBlock = alreadyIn ? `
+                <div class="flex items-start gap-2 p-3 rounded-2xl mb-4 text-xs font-semibold" style="background: rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.25); color:#a17c05;">
+                    <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <span>Entrada já aprovada às <strong>${timeStr}</strong>. Confere se não é reentrada antes de aprovar de novo.</span>
+                </div>
+                <button onclick="scanSheetApprove('${guest.id}', true)" class="btn-approve is-done w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2">
+                    <svg class="w-4.5 h-4.5" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Aprovar mesmo assim
+                </button>` : `
+                <button onclick="scanSheetApprove('${guest.id}', false)" class="btn-approve w-full py-4 rounded-2xl font-extrabold text-base flex items-center justify-center gap-2.5">
+                    <svg class="w-5.5 h-5.5" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Aprovar Entrada
+                </button>
+                <button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3 rounded-2xl font-bold text-[13.5px] flex items-center justify-center gap-2 mt-2.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Não aprovar agora
+                </button>`;
+
+            return `
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-base shrink-0" style="${ticketBadgeClasses(guest.ticketType)}">${initial}</div>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-base font-bold truncate">${escapeHtml(guest.name)}</h3>
+                        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-full" style="${ticketBadgeClasses(guest.ticketType)}">${guest.ticketType}</span>
+                            <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-full" style="${statusPillClasses(guest.status)}">${guest.status}</span>
+                        </div>
+                    </div>
+                </div>
+                ${approveBlock}
+                <div class="flex items-center justify-center gap-6 mt-3.5">
+                    <button onclick="toggleScanSheetNote()" class="text-[12px] font-bold flex items-center gap-1.5" style="color: var(--text-faint);">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Observação
+                    </button>
+                    <button onclick="scanSheetBan('${guest.id}')" class="text-[12px] font-bold flex items-center gap-1.5" style="color: rgba(251,113,133,0.8);">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 11-12.728 0m12.728 0A9 9 0 015.636 18.364m12.728-12.728L5.636 18.364" />
+                        </svg>
+                        Banir
+                    </button>
+                </div>
+                <div id="scanSheetNoteField" class="hidden mt-3">
+                    <input type="text" id="scanSheetNoteInput" class="field-input w-full text-xs py-2"
+                        placeholder="Ex: chegou com +1 não cadastrado" value="${escapeHtml(guest.checkinNote || '')}"
+                        onblur="saveCheckinNote('${guest.id}', this.value)"
+                        onkeydown="if(event.key==='Enter'){this.blur();}">
+                </div>`;
+        }
+
+        window.toggleScanSheetNote = function () {
+            const field = document.getElementById('scanSheetNoteField');
+            if (!field) return;
+            field.classList.toggle('hidden');
+            if (!field.classList.contains('hidden')) {
+                const input = document.getElementById('scanSheetNoteInput');
+                if (input) setTimeout(() => input.focus(), 50);
+            }
+        };
+
+        // finally guarantees the sheet closes (and the camera resumes scanning)
+        // no matter what happens above it — a stuck sheet with no feedback and
+        // no way back to the camera is the worst possible failure here.
+        window.scanSheetApprove = function (id, isReapprove) {
+            try {
+                if (isReapprove) {
+                    const g = guests.find(x => x.id === id);
+                    try { playApproveFeedback(); } catch (err) { console.error(err); }
+                    showToast(`${g ? g.name : 'Convidado'} — reentrada confirmada`, 'success');
+                    logActivity('approve_entry', `Reentrada confirmada — ${g ? g.name : id}`);
+                } else {
+                    window.approveEntry(id);
+                }
+            } finally {
+                closeScanResultSheet();
+            }
+        };
+
+        window.scanSheetBan = function (id) {
+            try {
+                window.banGuest(id);
+            } finally {
+                closeScanResultSheet();
+            }
+        };
+
+        window.scanSheetUnban = function (id) {
+            try {
+                window.banGuest(id);
+            } finally {
+                closeScanResultSheet();
+            }
+        };
 
         openScannerBtn.addEventListener('click', () => {
             scannerModal.classList.add('active');
@@ -2316,11 +2591,8 @@
         scannerCloseBtn.addEventListener('click', () => {
             stopScanner();
             scannerModal.classList.remove('active');
-        });
-
-        clearScanBtn.addEventListener('click', () => {
-            scannedGuestId = null;
-            renderCheckin();
+            scanResultSheet.classList.remove('is-open');
+            scanSheetOpen = false;
         });
 
         // ---------- Name sanitization (cadastro de usuário + convidados) ----------
@@ -2436,21 +2708,12 @@
                 : emptyState('Nenhum convidado encontrado.');
         }
 
-        let scannedGuestId = null;
-
         function renderCheckin() {
-            let filtered;
-            if (scannedGuestId) {
-                filtered = guests.filter(g => g.id === scannedGuestId);
-                scanResultBanner.classList.remove('hidden');
-            } else {
-                const term = checkinSearchInput.value.toLowerCase().trim();
-                filtered = sortGuestsForDisplay(guests.filter(g => matchesSearch(g, term)));
-                scanResultBanner.classList.add('hidden');
-            }
+            const term = checkinSearchInput.value.toLowerCase().trim();
+            const filtered = sortGuestsForDisplay(guests.filter(g => matchesSearch(g, term)));
 
             if (!filtered.length) {
-                checkinContainer.innerHTML = emptyState(scannedGuestId ? 'Convidado do QR não encontrado.' : 'Nenhum convidado encontrado.');
+                checkinContainer.innerHTML = emptyState('Nenhum convidado encontrado.');
                 return;
             }
 
@@ -2620,21 +2883,17 @@
             document.body.removeChild(link);
         });
 
-        clearAllBtn.addEventListener('click', async () => {
+        clearAllBtn.addEventListener('click', () => {
             if (!guests.length) return alert('Sua lista já está vazia.');
             if (!confirm('Tem certeza que deseja APAGAR toda a lista do evento? Esta ação não pode ser desfeita!')) return;
-            clearAllBtn.disabled = true;
-            try {
-                for (let i = 0; i < guests.length; i += 450) {
-                    const batch = writeBatch(db);
-                    guests.slice(i, i + 450).forEach(g => batch.delete(doc(db, 'guests', g.id)));
-                    await batch.commit();
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível limpar a lista. Verifique sua conexão.');
-            } finally {
-                clearAllBtn.disabled = false;
+            // Batches are dispatched without awaiting each other — same reasoning
+            // as the single-guest writes: a commit() doesn't resolve until the
+            // server acks it, and awaiting that would hang this button forever
+            // with no internet. Each batch applies to the local cache right away.
+            for (let i = 0; i < guests.length; i += 450) {
+                const batch = writeBatch(db);
+                guests.slice(i, i + 450).forEach(g => batch.delete(doc(db, 'guests', g.id)));
+                batch.commit().catch(err => reportWriteError(err, 'Não foi possível limpar a lista.'));
             }
         });
 
@@ -2703,30 +2962,22 @@
                 return;
             }
 
-            importConfirmBtn.disabled = true;
-            try {
-                const base = Date.now();
-                for (let start = 0; start < toAdd.length; start += 450) {
-                    const chunk = toAdd.slice(start, start + 450);
-                    const batch = writeBatch(db);
-                    chunk.forEach((name, j) => {
-                        const idx = start + j;
-                        batch.set(doc(guestsCol), {
-                            name, phone: '', ticketType, status, lote: eventSettings.currentLote, notes: '',
-                            checkedIn: false, checkinAt: null, banned: false, banReason: '', checkinNote: '',
-                            createdAt: base - idx
-                        });
+            const base = Date.now();
+            for (let start = 0; start < toAdd.length; start += 450) {
+                const chunk = toAdd.slice(start, start + 450);
+                const batch = writeBatch(db);
+                chunk.forEach((name, j) => {
+                    const idx = start + j;
+                    batch.set(doc(guestsCol), {
+                        name, phone: '', ticketType, status, lote: eventSettings.currentLote, notes: '',
+                        checkedIn: false, checkinAt: null, banned: false, banReason: '', checkinNote: '',
+                        createdAt: base - idx
                     });
-                    await batch.commit();
-                }
-                closeImportModal();
-                alert(`${toAdd.length} convidado${toAdd.length === 1 ? '' : 's'} importado${toAdd.length === 1 ? '' : 's'}.${skipped ? ` ${skipped} duplicado${skipped === 1 ? '' : 's'} ignorado${skipped === 1 ? '' : 's'}.` : ''}`);
-            } catch (err) {
-                console.error(err);
-                alert('Não foi possível importar a lista. Verifique sua conexão e tente novamente.');
-            } finally {
-                importConfirmBtn.disabled = false;
+                });
+                batch.commit().catch(err => reportWriteError(err, 'Não foi possível importar parte da lista.'));
             }
+            closeImportModal();
+            alert(`${toAdd.length} convidado${toAdd.length === 1 ? '' : 's'} importado${toAdd.length === 1 ? '' : 's'}.${skipped ? ` ${skipped} duplicado${skipped === 1 ? '' : 's'} ignorado${skipped === 1 ? '' : 's'}.` : ''}`);
         });
 
         window.addEventListener('keydown', (e) => {
