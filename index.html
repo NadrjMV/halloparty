@@ -2474,18 +2474,28 @@
                 </div>`;
         }
 
-        function buildScanSheetValid(guest) {
-            const initial = (guest.name.trim()[0] || '?').toUpperCase();
-            const alreadyIn = guest.checkedIn;
-            const timeStr = guest.checkinAt ? new Date(guest.checkinAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-
-            const approveBlock = alreadyIn ? `
-                <div class="flex items-start gap-2 p-3 rounded-2xl mb-4 text-xs font-semibold" style="background: rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.25); color:#a17c05;">
+        function scanSheetWarning(message) {
+            return `
+                <div class="flex items-start gap-2 p-3 rounded-2xl mb-3 text-xs font-semibold" style="background: rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.25); color:#a17c05;">
                     <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                     </svg>
-                    <span>Entrada já aprovada às <strong>${timeStr}</strong>. Confere se não é reentrada antes de aprovar de novo.</span>
-                </div>
+                    <span>${message}</span>
+                </div>`;
+        }
+
+        function buildScanSheetValid(guest) {
+            const initial = (guest.name.trim()[0] || '?').toUpperCase();
+            const alreadyIn = guest.checkedIn;
+            const isPending = guest.status === 'Pendente';
+            const timeStr = guest.checkinAt ? new Date(guest.checkinAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+            const warnings = [
+                alreadyIn ? scanSheetWarning(`Entrada já aprovada às <strong>${timeStr}</strong>. Confere se não é reentrada antes de aprovar de novo.`) : '',
+                isPending ? scanSheetWarning('Pagamento pendente — confirme antes de liberar a entrada.') : ''
+            ].join('');
+
+            const approveButtons = alreadyIn ? `
                 <button onclick="scanSheetApprove('${guest.id}', true)" class="btn-approve is-done w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2">
                     <svg class="w-4.5 h-4.5" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
@@ -2516,7 +2526,8 @@
                         </div>
                     </div>
                 </div>
-                ${approveBlock}
+                ${warnings}
+                ${approveButtons}
                 <div class="flex items-center justify-center gap-6 mt-3.5">
                     <button onclick="toggleScanSheetNote()" class="text-[12px] font-bold flex items-center gap-1.5" style="color: var(--text-faint);">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
