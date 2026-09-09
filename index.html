@@ -727,70 +727,70 @@
 
             <!-- TAB 2: CHECK-IN / PORTARIA -->
             <section id="tab-checkin" class="tab-content">
-                <div class="surface-soft p-3 mb-3.5">
-                    <div class="flex items-center gap-2">
-                        <div class="relative flex-1">
-                            <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
-                                style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input type="text" id="checkinSearchInput" class="field-input w-full pl-10 text-sm"
-                                placeholder="Buscar por nome, telefone ou fantasia...">
+                <!-- Full view: admin only — search, manual actions, list -->
+                <div id="checkinFullView">
+                    <div class="surface-soft p-3 mb-3.5">
+                        <div class="flex items-center gap-2">
+                            <div class="relative flex-1">
+                                <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
+                                    style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <input type="text" id="checkinSearchInput" class="field-input w-full pl-10 text-sm"
+                                    placeholder="Buscar por nome, telefone ou fantasia...">
+                            </div>
+                            <button id="openScannerBtn" aria-label="Escanear QR Code" class="icon-action shrink-0"
+                                style="width:42px; height:42px; color:#8b5cf6;">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 7V5.5A1.5 1.5 0 015.5 4H7" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 4h1.5A1.5 1.5 0 0120 5.5V7" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M20 17v1.5a1.5 1.5 0 01-1.5 1.5H17" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 20H5.5A1.5 1.5 0 014 18.5V17" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 12h16" />
+                                </svg>
+                            </button>
                         </div>
-                        <button id="openScannerBtn" aria-label="Escanear QR Code" class="icon-action shrink-0"
-                            style="width:42px; height:42px; color:#8b5cf6;">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 7V5.5A1.5 1.5 0 015.5 4H7" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17 4h1.5A1.5 1.5 0 0120 5.5V7" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M20 17v1.5a1.5 1.5 0 01-1.5 1.5H17" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M7 20H5.5A1.5 1.5 0 014 18.5V17" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 12h16" />
-                            </svg>
-                        </button>
                     </div>
+
+                    <div id="checkinContainer" class="flex flex-col gap-3"></div>
                 </div>
 
-                <div id="checkinContainer" class="flex flex-col gap-3"></div>
+                <!-- Simple view: portaria only — read-only entry status list
+                     (no approve/ban/notes — that's the point) above a docked
+                     scan panel. Actual approval only happens through the scan
+                     sheet, never by tapping something in this list. -->
+                <div id="checkinSimpleView" class="flex-col" style="display:none;">
+                    <div class="relative mb-3">
+                        <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
+                            style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="portariaSearchInput" class="field-input w-full pl-10 text-sm"
+                            placeholder="Buscar por nome...">
+                    </div>
+                    <div id="portariaListContainer" class="flex flex-col gap-2" style="padding-bottom: 42vh;"></div>
+                </div>
             </section>
 
-            <!-- TAB 3: BAR (só entrega o combo — não vê a lista completa) -->
+            <!-- TAB 3: BAR (só combo — lista mostra apenas quem comprou, e só
+                 o status de retirada; a retirada em si só acontece via QR) -->
             <section id="tab-bar" class="tab-content">
-                <div class="surface-soft p-3 mb-3.5">
-                    <div class="flex items-center gap-2">
-                        <div class="relative flex-1">
-                            <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
-                                style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input type="text" id="barSearchInput" class="field-input w-full pl-10 text-sm"
-                                placeholder="Buscar convidado com combo...">
-                        </div>
-                        <button id="openScannerBarBtn" aria-label="Escanear QR Code" class="icon-action shrink-0"
-                            style="width:42px; height:42px; color:#eab308;">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 7V5.5A1.5 1.5 0 015.5 4H7" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17 4h1.5A1.5 1.5 0 0120 5.5V7" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M20 17v1.5a1.5 1.5 0 01-1.5 1.5H17" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M7 20H5.5A1.5 1.5 0 014 18.5V17" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 12h16" />
-                            </svg>
-                        </button>
-                    </div>
-                    <p class="text-[10.5px] mt-2" style="color: var(--text-faint);">Só aparecem aqui os convidados que
-                        compraram o Combo Red Label.</p>
+                <div class="relative mb-3">
+                    <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
+                        style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="text" id="barSearchInput" class="field-input w-full pl-10 text-sm"
+                        placeholder="Buscar convidado com combo...">
                 </div>
-
-                <div id="barContainer" class="flex flex-col gap-3"></div>
+                <div id="barListContainer" class="flex flex-col gap-2" style="padding-bottom: 42vh;"></div>
             </section>
 
             <!-- TAB 3: STATS -->
@@ -1002,7 +1002,7 @@
             </section>
 
             <!-- BOTTOM NAV -->
-            <nav class="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto p-2">
+            <nav id="appNav" class="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto p-2">
                 <div class="rounded-2xl p-1.5 flex items-center justify-around backdrop-blur-xl"
                     style="background-color: var(--nav-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 16px -8px rgba(0,0,0,0.25);">
 
@@ -1049,6 +1049,51 @@
                     </button>
                 </div>
             </nav>
+
+            <!-- PORTARIA SCAN DOCK — the whole bottom sheet IS the button, not
+                 a small button floating inside a bigger panel. Always docked in
+                 place of the bottom nav; the only way portaria approves an
+                 entry — the list above it is read-only status, nothing more. -->
+            <button id="openScannerPortariaBtn" aria-label="Ler QR Code"
+                class="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto flex flex-col items-center justify-center gap-3 text-center"
+                style="display:none; height: 36vh; border:none; border-top: 1px solid var(--border-color); border-radius: 28px 28px 0 0;
+                       background: var(--bg-card); box-shadow: 0 -14px 34px -16px rgba(0,0,0,0.22);">
+                <div class="w-9 h-1 rounded-full absolute" style="top:14px; background: var(--border-color-strong);"></div>
+                <div class="w-16 h-16 rounded-full flex items-center justify-center"
+                    style="background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%); box-shadow: 0 8px 20px -6px rgba(124,58,237,0.55);">
+                    <svg class="w-8 h-8" fill="none" stroke="#fff" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
+                            d="M4 7V5.5A1.5 1.5 0 015.5 4H7M17 4h1.5A1.5 1.5 0 0120 5.5V7M20 17v1.5a1.5 1.5 0 01-1.5 1.5H17M7 20H5.5A1.5 1.5 0 014 18.5V17M4 12h16" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M8 9h8v6H8z" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-lg font-extrabold" style="color: var(--text-sub);">Ler QR Code</p>
+                    <p class="text-xs font-medium mt-1" style="color: var(--text-faint);">Aponte a câmera pro
+                        ingresso do convidado</p>
+                </div>
+            </button>
+
+            <!-- BAR SCAN DOCK — same idea, combo-only -->
+            <button id="openScannerBarBtn" aria-label="Ler QR Code"
+                class="fixed bottom-0 left-0 right-0 z-40 max-w-[480px] mx-auto flex flex-col items-center justify-center gap-3 text-center"
+                style="display:none; height: 36vh; border:none; border-top: 1px solid var(--border-color); border-radius: 28px 28px 0 0;
+                       background: var(--bg-card); box-shadow: 0 -14px 34px -16px rgba(0,0,0,0.22);">
+                <div class="w-9 h-1 rounded-full absolute" style="top:14px; background: var(--border-color-strong);"></div>
+                <div class="w-16 h-16 rounded-full flex items-center justify-center"
+                    style="background: linear-gradient(135deg, #f5c53d 0%, #d69700 100%); box-shadow: 0 8px 20px -6px rgba(214,151,0,0.5);">
+                    <svg class="w-8 h-8" fill="none" stroke="#3a2c00" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
+                            d="M4 7V5.5A1.5 1.5 0 015.5 4H7M17 4h1.5A1.5 1.5 0 0120 5.5V7M20 17v1.5a1.5 1.5 0 01-1.5 1.5H17M7 20H5.5A1.5 1.5 0 014 18.5V17M4 12h16" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M8 9h8v6H8z" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-lg font-extrabold" style="color: var(--text-sub);">Ler QR Code</p>
+                    <p class="text-xs font-medium mt-1" style="color: var(--text-faint);">Confira e entregue o Combo
+                        Red Label</p>
+                </div>
+            </button>
 
         </div>
 
@@ -1470,9 +1515,13 @@
 
         const checkinContainer = document.getElementById('checkinContainer');
         const checkinSearchInput = document.getElementById('checkinSearchInput');
-
-        const barContainer = document.getElementById('barContainer');
+        const checkinFullView = document.getElementById('checkinFullView');
+        const checkinSimpleView = document.getElementById('checkinSimpleView');
+        const portariaSearchInput = document.getElementById('portariaSearchInput');
+        const portariaListContainer = document.getElementById('portariaListContainer');
         const barSearchInput = document.getElementById('barSearchInput');
+        const barListContainer = document.getElementById('barListContainer');
+        const appNav = document.getElementById('appNav');
 
         const quickSuccessModal = document.getElementById('quickSuccessModal');
         const modalAddedName = document.getElementById('modalAddedName');
@@ -2260,6 +2309,18 @@
             navBtnCheckin.classList.toggle('hidden', isBar);
             navBtnBar.classList.toggle('hidden', !(isAdmin || isBar));
 
+            // Portaria and bar are single-purpose (just "read the QR") — there's
+            // nothing to switch between, so the tab bar itself goes away.
+            appNav.classList.toggle('hidden', isPortaria || isBar);
+
+            // Portaria gets a read-only "who's already in" list — no approve/ban/
+            // notes buttons, that's not theirs to touch — plus the docked scanner,
+            // which is the only real way an entry gets approved for this role.
+            checkinFullView.classList.toggle('hidden', isPortaria);
+            checkinSimpleView.style.display = isPortaria ? 'flex' : 'none';
+            openScannerPortariaBtn.style.display = isPortaria ? 'flex' : 'none';
+            openScannerBarBtn.style.display = isBar ? 'flex' : 'none';
+
             let defaultTab = 'tab-add';
             if (isPortaria) defaultTab = 'tab-checkin';
             else if (isBar) defaultTab = 'tab-bar';
@@ -2422,7 +2483,8 @@
         // ---------- Search & filters ----------
         addSearchInput.addEventListener('input', renderAddList);
         checkinSearchInput.addEventListener('input', renderCheckin);
-        barSearchInput.addEventListener('input', renderBar);
+        portariaSearchInput.addEventListener('input', renderPortariaList);
+        barSearchInput.addEventListener('input', renderBarList);
 
         filterChips.forEach(chip => {
             chip.addEventListener('click', () => {
@@ -2554,6 +2616,11 @@
         window.redeemCombo = function (id) {
             const g = guests.find(x => x.id === id);
             if (!g || !g.hasCombo || g.comboRedeemed) return;
+            // Defense in depth: the bar's own scan sheet already refuses to render
+            // a redeem button for a banned or not-yet-checked-in guest, but this
+            // guard holds even if that call is somehow triggered another way.
+            // Admin keeps override ability, same as approveEntry/banGuest do.
+            if (currentUserRole === 'bar' && (g.banned || !g.checkedIn)) return;
             if (!confirm(`Confirmar retirada do combo de ${g.name}? Essa ação não pode ser desfeita.`)) return;
             g.comboRedeemed = true;
             g.comboRedeemedAt = Date.now();
@@ -2769,31 +2836,45 @@
         // Bar-only scan result: name (needed to hand the drink to the right
         // person) + combo status. No ticket type/payment/ban/entry — none of
         // that is the bar's business.
+        // Bar's scan sheet is the one place all three combo safety checks are
+        // enforced together: (1) banned guests get nothing, (2) the ticket has
+        // to actually include the combo, (3) it can't have been redeemed
+        // already (one-way — see redeemCombo), and (4) entry has to have been
+        // confirmed at the door first, so nobody drinks before they're in.
+        // Each failure is a hard stop — no redeem button is ever rendered.
         function buildScanSheetBarCombo(guest) {
             const initial = (guest.name.trim()[0] || '?').toUpperCase();
-            if (!guest.hasCombo) {
-                return `
-                    <div class="flex flex-col items-center text-center pt-1">
-                        <div class="w-14 h-14 rounded-full flex items-center justify-center mb-3.5" style="background: rgba(251,113,133,0.13); color:#fb7185;">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </div>
-                        <h3 class="text-base font-bold mb-1.5">${escapeHtml(guest.name)}</h3>
-                        <p class="text-xs mb-5" style="color: var(--text-sub);">Esse ingresso não inclui o Combo Red Label.</p>
-                        <button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3.5 rounded-2xl font-extrabold text-sm">Ok</button>
-                    </div>`;
-            }
-            return `
+            const header = `
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-base shrink-0" style="background:rgba(234,179,8,0.15); color:#eab308;">${initial}</div>
                     <div class="min-w-0">
                         <h3 class="text-base font-bold truncate">${escapeHtml(guest.name)}</h3>
-                        ${comboBadge(guest)}
                     </div>
-                </div>
-                ${comboActionBlock(guest, 'scanSheetRedeemCombo')}
-                <button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3 rounded-2xl font-bold text-[13.5px]">Fechar</button>`;
+                </div>`;
+            const closeBtn = `<button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3 rounded-2xl font-bold text-[13.5px]">Fechar</button>`;
+
+            if (guest.banned) {
+                return header + scanSheetBlock('Convidado banido — não deve receber o combo.') + closeBtn;
+            }
+            if (!guest.hasCombo) {
+                return header + scanSheetBlock('Esse ingresso não inclui o Combo Red Label.') + closeBtn;
+            }
+            if (!guest.checkedIn) {
+                return header + scanSheetBlock('Entrada ainda não confirmada na portaria — valide a entrada antes de entregar o combo.') + closeBtn;
+            }
+            // comboRedeemed and the not-yet-redeemed cases both render through
+            // comboActionBlock: locked message if already handed out, button if not.
+            return header + comboActionBlock(guest, 'scanSheetRedeemCombo') + closeBtn;
+        }
+
+        function scanSheetBlock(message) {
+            return `
+                <div class="flex items-start gap-2 p-3 rounded-2xl mb-4 text-xs font-semibold" style="background: rgba(251,113,133,0.1); border:1px solid rgba(251,113,133,0.25); color:#fb7185;">
+                    <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 11-12.728 0m12.728 0A9 9 0 015.636 18.364m12.728-12.728L5.636 18.364" />
+                    </svg>
+                    <span>${message}</span>
+                </div>`;
         }
 
         function buildScanSheetBanned(guest) {
@@ -2949,6 +3030,14 @@
 
         const openScannerBarBtn = document.getElementById('openScannerBarBtn');
         openScannerBarBtn.addEventListener('click', () => {
+            scannerCooldownUntil = 0;
+            sheetGuestId = null;
+            scannerModal.classList.add('active');
+            startScanner();
+        });
+
+        const openScannerPortariaBtn = document.getElementById('openScannerPortariaBtn');
+        openScannerPortariaBtn.addEventListener('click', () => {
             scannerCooldownUntil = 0;
             sheetGuestId = null;
             scannerModal.classList.add('active');
@@ -3199,28 +3288,65 @@
             }).join('');
         }
 
-        // Bar tab only ever lists combo purchasers — never the full roster —
-        // so bar staff can't browse names outside their one job.
-        function renderBar() {
+        // Portaria's list is read-only on purpose — no approve/ban/notes here.
+        // The only thing that actually approves an entry for this role is the
+        // docked scanner, so this is just "who's already in or not".
+        function renderPortariaList() {
+            const term = portariaSearchInput.value.toLowerCase().trim();
+            const filtered = sortGuestsForDisplay(guests.filter(g => matchesSearch(g, term)));
+
+            if (!filtered.length) {
+                portariaListContainer.innerHTML = emptyState('Nenhum convidado encontrado.');
+                return;
+            }
+
+            portariaListContainer.innerHTML = filtered.map(guest => {
+                const initial = (guest.name.trim()[0] || '?').toUpperCase();
+                const statusPill = guest.banned
+                    ? '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#fb7185; background:rgba(251,113,133,0.15);">🚫 Banido</span>'
+                    : guest.checkedIn
+                        ? '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#22c55e; background:rgba(34,197,94,0.13);">Já entrou</span>'
+                        : '<span class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-faint); background: var(--bg-input);">Ainda não entrou</span>';
+                return `
+                <div class="surface-soft p-3 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0" style="${ticketBadgeClasses(guest.ticketType)}">${initial}</div>
+                    <div class="truncate flex-1">
+                        <h3 class="font-semibold text-sm truncate leading-snug">${escapeHtml(guest.name)}</h3>
+                        <div class="flex items-center gap-1.5 mt-1 flex-wrap text-[10.5px]">
+                            <span class="font-semibold px-2 py-0.5 rounded-full" style="${ticketBadgeClasses(guest.ticketType)}">${guest.ticketType}</span>
+                            ${statusPill}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Bar's list mirrors portaria's — read-only, filtered to combo buyers
+        // only. Redeeming still only happens through the QR scan sheet, never
+        // by tapping something here.
+        function renderBarList() {
             const term = barSearchInput.value.toLowerCase().trim();
             const filtered = sortGuestsForDisplay(guests.filter(g => g.hasCombo && matchesSearch(g, term)));
 
             if (!filtered.length) {
-                barContainer.innerHTML = emptyState('Nenhum combo encontrado.');
+                barListContainer.innerHTML = emptyState('Nenhum comprador do combo encontrado.');
                 return;
             }
 
-            barContainer.innerHTML = filtered.map(guest => {
+            barListContainer.innerHTML = filtered.map(guest => {
                 const initial = (guest.name.trim()[0] || '?').toUpperCase();
+                const statusPill = guest.comboRedeemed
+                    ? '<span class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-faint); background: var(--bg-input);">Já retirou</span>'
+                    : '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#eab308; background:rgba(234,179,8,0.15);">Ainda não retirou</span>';
                 return `
-                <div class="surface p-3.5 flex flex-col gap-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0" style="background:rgba(234,179,8,0.15); color:#eab308;">${initial}</div>
-                        <div class="truncate flex-1">
-                            <h3 class="font-semibold text-sm truncate leading-snug">${escapeHtml(guest.name)}</h3>
+                <div class="surface-soft p-3 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0" style="background:rgba(234,179,8,0.15); color:#eab308;">${initial}</div>
+                    <div class="truncate flex-1">
+                        <h3 class="font-semibold text-sm truncate leading-snug">${escapeHtml(guest.name)}</h3>
+                        <div class="flex items-center gap-1.5 mt-1 flex-wrap text-[10.5px]">
+                            ${statusPill}
                         </div>
                     </div>
-                    ${comboActionBlock(guest, 'redeemCombo')}
                 </div>`;
             }).join('');
         }
@@ -3253,7 +3379,8 @@
         function renderAll() {
             renderAddList();
             renderCheckin();
-            renderBar();
+            renderPortariaList();
+            renderBarList();
             updateStats();
         }
 
