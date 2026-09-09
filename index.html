@@ -1602,29 +1602,52 @@
         addListContainer.innerHTML = emptyState('Carregando lista...');
         checkinContainer.innerHTML = emptyState('Carregando lista...');
 
-        // ---------- Live sync with Firestore ----------
-        onSnapshot(guestsQuery, (snapshot) => {
-            guests = snapshot.docs.map(d => migrateGuest({ id: d.id, ...d.data() }));
-            syncBanner.classList.add('hidden');
-            renderAll();
-        }, (error) => {
-            console.error('Erro de sincronização com o Firestore:', error);
-            syncBanner.classList.remove('hidden');
-        });
+        // ---------- Live sync with Firestore (guests/invites/users/logs) ----------
+        // These four all require being signed in (per the Firestore rules), so
+        // they're only subscribed AFTER a successful login — never at page
+        // load. Subscribing unconditionally at load used to mean: on a fresh
+        // login (as opposed to reloading an already-authenticated session),
+        // the very first snapshot attempt fired before the auth token was
+        // attached, got a permission-denied, and Firestore's SDK does NOT
+        // retry a listener that already failed that way — it just sits dead
+        // until the page is reloaded. That was the "Sem conexão com o
+        // Firebase" banner showing up every time someone logged in fresh.
+        let unsubscribeAuthListeners = null;
 
-        onSnapshot(invitesQuery, (snapshot) => {
-            renderInvites(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-        }, (error) => console.error('Erro ao carregar convites:', error));
+        function subscribeAuthenticatedListeners() {
+            if (unsubscribeAuthListeners) return; // already subscribed
+            const unsubs = [
+                onSnapshot(guestsQuery, (snapshot) => {
+                    guests = snapshot.docs.map(d => migrateGuest({ id: d.id, ...d.data() }));
+                    syncBanner.classList.add('hidden');
+                    renderAll();
+                }, (error) => {
+                    console.error('Erro de sincronização com o Firestore:', error);
+                    syncBanner.classList.remove('hidden');
+                }),
+                onSnapshot(invitesQuery, (snapshot) => {
+                    renderInvites(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+                }, (error) => console.error('Erro ao carregar convites:', error)),
+                onSnapshot(usersQuery, (snapshot) => {
+                    renderUsers(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+                }, (error) => console.error('Erro ao carregar usuários:', error)),
+                onSnapshot(logsQuery, (snapshot) => {
+                    renderLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+                }, (error) => console.error('Erro ao carregar logs:', error))
+            ];
+            unsubscribeAuthListeners = () => unsubs.forEach(unsub => unsub());
+        }
 
-        onSnapshot(usersQuery, (snapshot) => {
-            renderUsers(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-        }, (error) => console.error('Erro ao carregar usuários:', error));
-
-        onSnapshot(logsQuery, (snapshot) => {
-            renderLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-        }, (error) => console.error('Erro ao carregar logs:', error));
+        function unsubscribeAuthenticatedListeners() {
+            if (!unsubscribeAuthListeners) return;
+            unsubscribeAuthListeners();
+            unsubscribeAuthListeners = null;
+            guests = [];
+        }
 
         // ---------- Event settings (address / time / transport — admin-editable) ----------
+        // Public (no login needed) — the ticket-link page and the login
+        // screen's header both need this before anyone has signed in.
         onSnapshot(eventSettingsRef, (snap) => {
             if (snap.exists()) Object.assign(eventSettings, snap.data());
             applyEventSettingsToUI();
@@ -2030,6 +2053,25 @@
             showLoginPane();
         });
 
+        // Right after a *fresh* sign-in (not a session restored from a page
+        // reload), the SDK can briefly still be attaching the previous
+        // session's (or no) auth token to this client's Firestore connection
+        // — a one-off race confirmed by testing against an isolated Firebase
+        // app instance, which never has the problem. One short retry clears
+        // it up without weakening the fail-closed handling below (a second
+        // permission-denied is still treated as a real denial).
+        async function getUserDocWithRetry(uid) {
+            try {
+                return await withTimeout(getDoc(doc(db, 'users', uid)), 4000);
+            } catch (err) {
+                if (err && err.code === 'permission-denied') {
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    return await withTimeout(getDoc(doc(db, 'users', uid)), 4000);
+                }
+                throw err;
+            }
+        }
+
         onAuthStateChanged(auth, async (user) => {
             if (ticketCodeFromUrl) return; // public ticket page — ignore auth entirely
             if (user) {
@@ -2038,7 +2080,7 @@
                 // open — better a brief window of stale access than locking an
                 // admin out mid-event over a wifi hiccup.
                 try {
-                    const userDocSnap = await withTimeout(getDoc(doc(db, 'users', user.uid)), 4000);
+                    const userDocSnap = await getUserDocWithRetry(user.uid);
                     if (!userDocSnap.exists() || userDocSnap.data().disabled) {
                         await signOut(auth);
                         showLoginPane();
@@ -2048,16 +2090,33 @@
                     }
                     currentUserRole = userDocSnap.data().role || 'admin';
                 } catch (err) {
+                    if (err && err.code === 'permission-denied') {
+                        // The Firestore rules themselves rejected this — a definitive
+                        // answer, not a connectivity blip. We genuinely don't know
+                        // who this is, so fail CLOSED: defaulting to admin here would
+                        // be exactly backwards for a role system.
+                        console.error('Acesso negado ao verificar a função do usuário — confira as regras do Firestore.', err);
+                        await signOut(auth);
+                        showLoginPane();
+                        loginError.textContent = 'Não foi possível confirmar seu acesso. Fale com o administrador.';
+                        loginError.classList.remove('hidden');
+                        return;
+                    }
+                    // A real connectivity hiccup (offline, timeout) — the original
+                    // reasoning still holds here: don't lock someone out of the app
+                    // they were already using mid-event just because the wifi blipped.
                     console.warn('Não foi possível verificar o status do usuário, liberando acesso.', err);
                 }
                 currentUserEmail = user.email;
                 applyRoleUI();
+                subscribeAuthenticatedListeners();
                 authLoading.classList.add('hidden');
                 authScreen.classList.add('hidden');
                 appRoot.classList.remove('hidden');
             } else {
                 currentUserEmail = null;
                 currentUserRole = 'admin';
+                unsubscribeAuthenticatedListeners();
                 await showAuthScreen();
             }
         });
