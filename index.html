@@ -627,6 +627,13 @@
                                 placeholder="Ex: Fantasia de Coringa">
                         </div>
 
+                        <label class="flex items-center gap-2 py-1 text-xs font-semibold cursor-pointer select-none"
+                            style="color: var(--text-sub);">
+                            <input type="checkbox" id="guestCombo" class="w-4 h-4 rounded"
+                                style="accent-color: #8b5cf6;">
+                            🥃 Comprou o Combo Red Label
+                        </label>
+
                         <button type="submit"
                             class="btn-primary w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 mt-1">
                             <svg class="w-4.5 h-4.5" width="18" height="18" fill="none" stroke="currentColor"
@@ -687,6 +694,9 @@
                             <button data-filter="Banido"
                                 class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
                                 style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">Banidos</button>
+                            <button data-filter="Combo"
+                                class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                                style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-sub);">🥃 Combo</button>
                             <span class="w-px h-4 shrink-0 self-center" style="background: var(--border-color);"></span>
                             <button data-filter="Lote1"
                                 class="filter-chip px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap"
@@ -746,6 +756,41 @@
                 </div>
 
                 <div id="checkinContainer" class="flex flex-col gap-3"></div>
+            </section>
+
+            <!-- TAB 3: BAR (só entrega o combo — não vê a lista completa) -->
+            <section id="tab-bar" class="tab-content">
+                <div class="surface-soft p-3 mb-3.5">
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
+                                style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input type="text" id="barSearchInput" class="field-input w-full pl-10 text-sm"
+                                placeholder="Buscar convidado com combo...">
+                        </div>
+                        <button id="openScannerBarBtn" aria-label="Escanear QR Code" class="icon-action shrink-0"
+                            style="width:42px; height:42px; color:#eab308;">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 7V5.5A1.5 1.5 0 015.5 4H7" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 4h1.5A1.5 1.5 0 0120 5.5V7" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M20 17v1.5a1.5 1.5 0 01-1.5 1.5H17" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 20H5.5A1.5 1.5 0 014 18.5V17" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 12h16" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-[10.5px] mt-2" style="color: var(--text-faint);">Só aparecem aqui os convidados que
+                        compraram o Combo Red Label.</p>
+                </div>
+
+                <div id="barContainer" class="flex flex-col gap-3"></div>
             </section>
 
             <!-- TAB 3: STATS -->
@@ -838,6 +883,18 @@
                                     class="w-2 h-2 rounded-full" style="background:#fb7185;"></span>Banidos</span>
                             <span id="breakdownBanned" class="font-bold" style="color:#fb7185;">0</span>
                         </div>
+                        <div class="flex justify-between items-center py-2.5">
+                            <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
+                                    class="w-2 h-2 rounded-full" style="background:#eab308;"></span>Combos
+                                comprados</span>
+                            <span id="breakdownComboBought" class="font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2.5">
+                            <span style="color: var(--text-sub);" class="flex items-center gap-2"><span
+                                    class="w-2 h-2 rounded-full" style="background:#a3a3a3;"></span>Combos
+                                retirados</span>
+                            <span id="breakdownComboRedeemed" class="font-bold">0</span>
+                        </div>
                     </div>
                 </div>
 
@@ -883,6 +940,15 @@
                 <div class="surface p-4 mt-4">
                     <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-sub);">
                         Convites de Acesso</h3>
+                    <div class="mb-3">
+                        <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
+                            for="inviteRole">Função de quem entrar com esse convite</label>
+                        <select id="inviteRole" class="field-input w-full">
+                            <option value="portaria" selected>Portaria (segurança — só valida entrada)</option>
+                            <option value="bar">Bar (só entrega o combo)</option>
+                            <option value="admin">Admin (acesso total)</option>
+                        </select>
+                    </div>
                     <div class="grid grid-cols-2 gap-3 mb-3">
                         <div>
                             <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
@@ -940,7 +1006,7 @@
                 <div class="rounded-2xl p-1.5 flex items-center justify-around backdrop-blur-xl"
                     style="background-color: var(--nav-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 16px -8px rgba(0,0,0,0.25);">
 
-                    <button data-tab="tab-add"
+                    <button id="navBtnAdd" data-tab="tab-add"
                         class="nav-btn is-active flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -953,7 +1019,7 @@
                                 class="nav-dot w-1 h-1 rounded-full" style="background:#ff6a1a;"></span></span>
                     </button>
 
-                    <button data-tab="tab-checkin"
+                    <button id="navBtnCheckin" data-tab="tab-checkin"
                         class="nav-btn flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -962,7 +1028,16 @@
                         <span class="text-[10px]">Check-in</span>
                     </button>
 
-                    <button data-tab="tab-stats"
+                    <button id="navBtnBar" data-tab="tab-bar"
+                        class="nav-btn hidden flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 3h14l-1.5 4.5M5 3l1.5 4.5m0 0L9 15a3 3 0 003 3v3m0-3a3 3 0 003-3l2.5-7.5m-11 0h11M8 21h8" />
+                        </svg>
+                        <span class="text-[10px]">Bar</span>
+                    </button>
+
+                    <button id="navBtnStats" data-tab="tab-stats"
                         class="nav-btn flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1006,7 +1081,8 @@
                 </svg>
             </div>
             <h3 id="modalAddedName" class="text-base font-bold mb-0.5 truncate">—</h3>
-            <p class="text-xs mb-3" style="color: var(--text-sub);">Cadastrado! Ingresso pronto pra enviar.</p>
+            <p class="text-xs mb-1" style="color: var(--text-sub);">Cadastrado! Ingresso pronto pra enviar.</p>
+            <p id="modalTicketCombo" class="hidden text-xs font-bold mb-3" style="color:#eab308;">🥃 Combo Red Label incluído</p>
 
             <div id="modalTicketQr" class="flex items-center justify-center p-3 rounded-2xl mb-3"
                 style="background:#ffffff; min-height:170px;"></div>
@@ -1108,7 +1184,8 @@
         style="background: var(--scrim); backdrop-filter: blur(4px);">
         <div class="modal-box surface p-5 max-w-[300px] w-full text-center">
             <h3 id="ticketModalName" class="text-base font-bold mb-1 truncate">—</h3>
-            <p class="text-xs mb-3" style="color: var(--text-sub);">Mostre esse QR na entrada da festa.</p>
+            <p class="text-xs mb-1" style="color: var(--text-sub);">Mostre esse QR na entrada da festa.</p>
+            <p id="ticketModalCombo" class="hidden text-xs font-bold mb-3" style="color:#eab308;">🥃 Combo Red Label incluído</p>
             <div id="ticketQrCanvas" class="flex items-center justify-center p-3 rounded-2xl mb-3"
                 style="background:#ffffff; min-height:190px;"></div>
             <div class="text-center text-[11px] rounded-xl p-3 mb-4 flex flex-col gap-1.5"
@@ -1179,7 +1256,8 @@
             <div id="ticketViewLoading" class="text-xs" style="color: var(--text-sub);">Carregando ingresso...</div>
             <div id="ticketViewContent" class="hidden surface p-5">
                 <h2 id="ticketViewName" class="text-lg font-bold mb-1 truncate">—</h2>
-                <p id="ticketViewMeta" class="text-xs mb-4" style="color: var(--text-sub);">—</p>
+                <p id="ticketViewMeta" class="text-xs mb-1" style="color: var(--text-sub);">—</p>
+                <p id="ticketViewCombo" class="hidden text-xs font-bold mb-3" style="color:#eab308;">🥃 Combo Red Label incluído</p>
                 <div id="ticketViewQrCanvas" class="flex items-center justify-center p-3 rounded-2xl mb-3"
                     style="background:#ffffff; min-height:190px;"></div>
                 <div class="text-center text-[11px] rounded-xl p-3 flex flex-col gap-1.5"
@@ -1253,6 +1331,7 @@
         const logsCol = collection(db, 'logs');
         const logsQuery = query(logsCol, orderBy('at', 'desc'), limit(50));
         let currentUserEmail = null;
+        let currentUserRole = 'admin';
 
         // Races a Firestore read against a timeout so a dead/absent connection
         // can never hang the UI forever — the venue may have no internet at all,
@@ -1292,7 +1371,11 @@
                 banned: !!g.banned,
                 banReason: g.banReason || '',
                 bannedBy: g.bannedBy || '',
-                checkinNote: g.checkinNote || ''
+                checkinNote: g.checkinNote || '',
+                hasCombo: !!g.hasCombo,
+                comboRedeemed: !!g.comboRedeemed,
+                comboRedeemedAt: g.comboRedeemedAt || null,
+                comboRedeemedBy: g.comboRedeemedBy || ''
             };
         }
 
@@ -1324,6 +1407,7 @@
         const goToLoginBtn = document.getElementById('goToLoginBtn');
         const logoutBtn = document.getElementById('logoutBtn');
 
+        const inviteRole = document.getElementById('inviteRole');
         const inviteMaxUses = document.getElementById('inviteMaxUses');
         const inviteExpiry = document.getElementById('inviteExpiry');
         const generateInviteBtn = document.getElementById('generateInviteBtn');
@@ -1373,6 +1457,7 @@
         const ticketCategoryInput = document.getElementById('ticketCategory');
         const paymentStatusInput = document.getElementById('paymentStatus');
         const guestNotesInput = document.getElementById('guestNotes');
+        const guestComboInput = document.getElementById('guestCombo');
         const guestNameSuggestions = document.getElementById('guestNameSuggestions');
         const guestNameDupWarning = document.getElementById('guestNameDupWarning');
         const loteChips = document.querySelectorAll('.lote-chip');
@@ -1386,12 +1471,20 @@
         const checkinContainer = document.getElementById('checkinContainer');
         const checkinSearchInput = document.getElementById('checkinSearchInput');
 
+        const barContainer = document.getElementById('barContainer');
+        const barSearchInput = document.getElementById('barSearchInput');
+
         const quickSuccessModal = document.getElementById('quickSuccessModal');
         const modalAddedName = document.getElementById('modalAddedName');
+        const modalTicketCombo = document.getElementById('modalTicketCombo');
         const modalContinueBtn = document.getElementById('modalContinueBtn');
 
         const navBtns = document.querySelectorAll('.nav-btn');
         const tabContents = document.querySelectorAll('.tab-content');
+        const navBtnAdd = document.getElementById('navBtnAdd');
+        const navBtnCheckin = document.getElementById('navBtnCheckin');
+        const navBtnBar = document.getElementById('navBtnBar');
+        const navBtnStats = document.getElementById('navBtnStats');
 
         const statTotal = document.getElementById('statTotal');
         const statCheckedIn = document.getElementById('statCheckedIn');
@@ -1401,6 +1494,8 @@
         const progressBar = document.getElementById('progressBar');
 
         const breakdownPista = document.getElementById('breakdownPista');
+        const breakdownComboBought = document.getElementById('breakdownComboBought');
+        const breakdownComboRedeemed = document.getElementById('breakdownComboRedeemed');
         const breakdownVip = document.getElementById('breakdownVip');
         const breakdownBackstage = document.getElementById('breakdownBackstage');
         const breakdownPending = document.getElementById('breakdownPending');
@@ -1438,6 +1533,7 @@
 
         const ticketModal = document.getElementById('ticketModal');
         const ticketModalName = document.getElementById('ticketModalName');
+        const ticketModalCombo = document.getElementById('ticketModalCombo');
         const ticketQrCanvas = document.getElementById('ticketQrCanvas');
         const ticketWhatsappBtn = document.getElementById('ticketWhatsappBtn');
         const ticketCopyBtn = document.getElementById('ticketCopyBtn');
@@ -1448,6 +1544,7 @@
         const ticketViewContent = document.getElementById('ticketViewContent');
         const ticketViewError = document.getElementById('ticketViewError');
         const ticketViewName = document.getElementById('ticketViewName');
+        const ticketViewCombo = document.getElementById('ticketViewCombo');
         const ticketViewMeta = document.getElementById('ticketViewMeta');
         const ticketViewQrCanvas = document.getElementById('ticketViewQrCanvas');
 
@@ -1563,7 +1660,8 @@
             const logoW = logoImg ? logoImg.width * (logoH / logoImg.height) : 0;
             const infoLinesCount = 1 + addressLines.length + 1; // time + address + transport
             const infoBoxH = infoLinesCount * lineH + 28;
-            const H = PAD + logoH + 28 + 30 + 22 + qrSize + 24 + infoBoxH + PAD;
+            const comboLineH = guest.hasCombo ? 26 : 0;
+            const H = PAD + logoH + 28 + 30 + 22 + comboLineH + qrSize + 24 + infoBoxH + PAD;
 
             const canvas = document.createElement('canvas');
             canvas.width = W;
@@ -1587,6 +1685,13 @@
             ctx.font = '13px "Plus Jakarta Sans", sans-serif';
             ctx.fillText(`${guest.ticketType} · ${guest.status}`, W / 2, y);
             y += 22;
+
+            if (guest.hasCombo) {
+                ctx.fillStyle = '#c88a00';
+                ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
+                ctx.fillText('🥃 Combo Red Label incluído', W / 2, y);
+                y += comboLineH;
+            }
 
             if (qrCanvas) ctx.drawImage(qrCanvas, (W - qrSize) / 2, y, qrSize, qrSize);
             y += qrSize + 24;
@@ -1799,6 +1904,7 @@
                 const g = migrateGuest({ id: snap.id, ...snap.data() });
                 ticketViewName.textContent = g.name;
                 ticketViewMeta.textContent = `${g.ticketType} · ${g.status}`;
+                ticketViewCombo.classList.toggle('hidden', !g.hasCombo);
                 await renderQrWithLogo(ticketViewQrCanvas, g.id);
                 fillTicketInfoBlock(ticketViewAddress, ticketViewTime, ticketViewTransport);
                 ticketViewLoading.classList.add('hidden');
@@ -1891,15 +1997,18 @@
                         loginError.classList.remove('hidden');
                         return;
                     }
+                    currentUserRole = userDocSnap.data().role || 'admin';
                 } catch (err) {
                     console.warn('Não foi possível verificar o status do usuário, liberando acesso.', err);
                 }
                 currentUserEmail = user.email;
+                applyRoleUI();
                 authLoading.classList.add('hidden');
                 authScreen.classList.add('hidden');
                 appRoot.classList.remove('hidden');
             } else {
                 currentUserEmail = null;
+                currentUserRole = 'admin';
                 await showAuthScreen();
             }
         });
@@ -1950,7 +2059,7 @@
                 await setDoc(doc(db, 'users', cred.user.uid), {
                     name: cleanName,
                     email: registerEmail.value.trim(),
-                    role: 'admin',
+                    role: currentInvite.data.role || 'admin',
                     createdAt: Date.now(),
                     invitedBy: currentInvite.code
                 });
@@ -1987,6 +2096,12 @@
             return { label: 'Ativo', dead: false };
         }
 
+        function roleLabel(role) {
+            if (role === 'portaria') return 'Portaria';
+            if (role === 'bar') return 'Bar';
+            return 'Admin';
+        }
+
         function renderInvites(invites) {
             if (!invites.length) {
                 inviteListContainer.innerHTML = `<p class="text-xs" style="color: var(--text-faint);">Nenhum convite gerado ainda.</p>`;
@@ -1999,7 +2114,7 @@
                 return `
                     <div class="surface-soft p-3 flex items-center justify-between gap-2">
                         <div class="min-w-0">
-                            <p class="text-xs font-semibold truncate">${inv.usedCount}/${inv.maxUses} usos · expira ${expiresText}</p>
+                            <p class="text-xs font-semibold truncate">${roleLabel(inv.role)} · ${inv.usedCount}/${inv.maxUses} usos · expira ${expiresText}</p>
                             <p class="text-[10.5px] truncate" style="color: var(--text-faint);">criado por ${escapeHtml(inv.createdBy || '—')}</p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
@@ -2026,7 +2141,7 @@
                     <div class="surface-soft p-3 flex items-center justify-between gap-2">
                         <div class="min-w-0">
                             <p class="text-xs font-semibold truncate">${escapeHtml(u.name || 'Sem nome')}${isSelf ? ' <span style="font-weight:500; color: var(--text-faint);">(você)</span>' : ''}</p>
-                            <p class="text-[10.5px] truncate" style="color: var(--text-faint);">${escapeHtml(u.email || '')} · ${escapeHtml(u.role || 'admin')}</p>
+                            <p class="text-[10.5px] truncate" style="color: var(--text-faint);">${escapeHtml(u.email || '')} · ${roleLabel(u.role)}</p>
                         </div>
                         ${isSelf ? '' : `<button onclick="removeUser('${u.id}')" class="text-[10px] font-semibold px-2 py-1 rounded-lg shrink-0" style="color:#fb7185; background:rgba(251,113,133,0.1);">Remover</button>`}
                     </div>`;
@@ -2040,9 +2155,11 @@
 
         generateInviteBtn.addEventListener('click', () => {
             const code = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+            const role = inviteRole.value;
             const maxUses = Math.max(1, parseInt(inviteMaxUses.value, 10) || 1);
             const days = parseInt(inviteExpiry.value, 10);
             safeWrite(() => setDoc(doc(db, 'invites', code), {
+                role,
                 maxUses,
                 usedCount: 0,
                 active: true,
@@ -2116,15 +2233,38 @@
         }
 
         // ---------- Tab navigation ----------
+        function activateTab(target) {
+            navBtns.forEach(b => b.classList.toggle('is-active', b.getAttribute('data-tab') === target));
+            tabContents.forEach(tab => tab.classList.toggle('active', tab.id === target));
+            if (target === 'tab-add') setTimeout(() => guestNameInput.focus(), 150);
+        }
+
         navBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const target = btn.getAttribute('data-tab');
-                navBtns.forEach(b => b.classList.remove('is-active'));
-                btn.classList.add('is-active');
-                tabContents.forEach(tab => tab.classList.toggle('active', tab.id === target));
-                if (target === 'tab-add') setTimeout(() => guestNameInput.focus(), 150);
-            });
+            btn.addEventListener('click', () => activateTab(btn.getAttribute('data-tab')));
         });
+
+        // ---------- Role-based access ----------
+        // Real enforcement lives in Firestore Security Rules (outside this
+        // file) — this only shapes what each role sees, so a curious staff
+        // member isn't presented with controls that aren't theirs to use.
+        // admin: everything. portaria (segurança): only validates entry at
+        // the check-in tab — no guest CRUD, no combo controls. bar: only
+        // reads/redeems the combo — never sees the full guest roster.
+        function applyRoleUI() {
+            const isAdmin = currentUserRole === 'admin';
+            const isPortaria = currentUserRole === 'portaria';
+            const isBar = currentUserRole === 'bar';
+
+            navBtnAdd.classList.toggle('hidden', !isAdmin);
+            navBtnStats.classList.toggle('hidden', !isAdmin);
+            navBtnCheckin.classList.toggle('hidden', isBar);
+            navBtnBar.classList.toggle('hidden', !(isAdmin || isBar));
+
+            let defaultTab = 'tab-add';
+            if (isPortaria) defaultTab = 'tab-checkin';
+            else if (isBar) defaultTab = 'tab-bar';
+            activateTab(defaultTab);
+        }
 
         // ---------- Add guest ----------
         const NAME_SUGGEST_MIN_CHARS = 3;
@@ -2204,6 +2344,7 @@
             // be shown immediately; setDoc() is fire-and-forget — see the note
             // above window.togglePayment for why we never await guest writes.
             const docRef = doc(guestsCol);
+            const hasCombo = guestComboInput.checked;
             const guestData = {
                 name,
                 phone,
@@ -2216,6 +2357,10 @@
                 banned: false,
                 banReason: '',
                 checkinNote: '',
+                hasCombo,
+                comboRedeemed: false,
+                comboRedeemedAt: null,
+                comboRedeemedBy: '',
                 createdAt: Date.now()
             };
 
@@ -2225,19 +2370,21 @@
                 guestNameInput.value = '';
                 guestPhoneInput.value = '';
                 guestNotesInput.value = '';
+                guestComboInput.checked = false;
                 guestNameSuggestions.classList.add('hidden');
                 guestNameSuggestions.innerHTML = '';
                 guestNameDupWarning.classList.add('hidden');
                 paymentStatusInput.disabled = false;
                 paymentStatusInput.style.opacity = '1';
 
-                showSuccessModal({ id: docRef.id, name, phone, ticketType: category, status });
+                showSuccessModal({ id: docRef.id, name, phone, ticketType: category, status, hasCombo });
                 logActivity('add_guest', `Adicionou ${name}`);
             }
         });
 
         async function showSuccessModal(guest) {
             modalAddedName.textContent = guest.name;
+            modalTicketCombo.classList.toggle('hidden', !guest.hasCombo);
             fillTicketInfoBlock(modalTicketAddress, modalTicketTime, modalTicketTransport);
 
             const link = `${location.origin}${location.pathname}?ticket=${guest.id}`;
@@ -2275,6 +2422,7 @@
         // ---------- Search & filters ----------
         addSearchInput.addEventListener('input', renderAddList);
         checkinSearchInput.addEventListener('input', renderCheckin);
+        barSearchInput.addEventListener('input', renderBar);
 
         filterChips.forEach(chip => {
             chip.addEventListener('click', () => {
@@ -2332,6 +2480,19 @@
             );
         };
 
+        // Marks/unmarks a purchased combo on an existing ticket — this is the
+        // "compra" side, done from the cadastro list, never from the portaria
+        // (that side only redeems, via redeemCombo). Locked once redeemed.
+        window.toggleCombo = function (id) {
+            const g = guests.find(x => x.id === id);
+            if (!g || g.comboRedeemed) return;
+            safeWrite(
+                () => updateDoc(doc(db, 'guests', id), { hasCombo: !g.hasCombo }),
+                'Não foi possível atualizar o combo.'
+            );
+            logActivity('toggle_combo', `${g.hasCombo ? 'Removeu' : 'Adicionou'} o combo de ${g.name}`);
+        };
+
         window.removeGuest = function (id) {
             const g = guests.find(x => x.id === id);
             if (!confirm('Deseja remover este convidado da lista?')) return;
@@ -2383,6 +2544,39 @@
                 'Não foi possível banir o convidado.'
             );
             logActivity('ban_guest', `Baniu ${g.name}${reason ? ` (${reason})` : ''}`);
+        };
+
+        // Combo retrieval is intentionally one-way — once marked redeemed there
+        // is no "undo" button anywhere in the UI (unlike check-in, which can be
+        // reverted). This matches the physical reality: the drink already left
+        // the bar. The confirm() is the only guard against a mis-tap, so it's
+        // deliberately kept even though other quick actions here skip it.
+        window.redeemCombo = function (id) {
+            const g = guests.find(x => x.id === id);
+            if (!g || !g.hasCombo || g.comboRedeemed) return;
+            if (!confirm(`Confirmar retirada do combo de ${g.name}? Essa ação não pode ser desfeita.`)) return;
+            g.comboRedeemed = true;
+            g.comboRedeemedAt = Date.now();
+            g.comboRedeemedBy = currentUserEmail || '';
+            safeWrite(
+                () => updateDoc(doc(db, 'guests', id), {
+                    comboRedeemed: true, comboRedeemedAt: g.comboRedeemedAt, comboRedeemedBy: g.comboRedeemedBy
+                }),
+                'Não foi possível confirmar a retirada do combo.'
+            );
+            try { playApproveFeedback(); } catch (err) { console.error(err); }
+            showToast(`${g.name} — combo retirado`, 'success');
+            logActivity('redeem_combo', `Retirou o combo de ${g.name}`);
+            renderAll();
+        };
+
+        // Scan-sheet wrapper: re-renders the sheet in place (instead of closing
+        // it, like scanSheetBan does) so the door staff can still tap "Aprovar
+        // Entrada" right after handing over the combo, without rescanning.
+        window.scanSheetRedeemCombo = function (id) {
+            window.redeemCombo(id);
+            const g = guests.find(x => x.id === id);
+            if (g) openScanResultSheet(currentUserRole === 'bar' ? buildScanSheetBarCombo(g) : buildScanSheetValid(g));
         };
 
         // Short two-tone chime (Web Audio, no file needed — works offline) + vibration
@@ -2438,6 +2632,7 @@
             const g = guests.find(x => x.id === id);
             if (!g) return;
             ticketModalName.textContent = g.name;
+            ticketModalCombo.classList.toggle('hidden', !g.hasCombo);
             fillTicketInfoBlock(ticketModalAddress, ticketModalTime, ticketModalTransport);
             const link = `${location.origin}${location.pathname}?ticket=${g.id}`;
             const waLink = g.phone
@@ -2526,6 +2721,12 @@
                 return;
             }
             sheetGuestId = guest.id;
+            // Bar staff only ever redeems the combo — they never see the
+            // entry-approval/ban flow, and never a name outside this one scan.
+            if (currentUserRole === 'bar') {
+                openScanResultSheet(buildScanSheetBarCombo(guest));
+                return;
+            }
             if (guest.banned) {
                 if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
                 openScanResultSheet(buildScanSheetBanned(guest));
@@ -2563,6 +2764,36 @@
                     <p class="text-xs mb-5" style="color: var(--text-sub); max-width:26ch;">Esse código não corresponde a nenhum convidado da lista.</p>
                     <button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3.5 rounded-2xl font-extrabold text-sm">Tentar de novo</button>
                 </div>`;
+        }
+
+        // Bar-only scan result: name (needed to hand the drink to the right
+        // person) + combo status. No ticket type/payment/ban/entry — none of
+        // that is the bar's business.
+        function buildScanSheetBarCombo(guest) {
+            const initial = (guest.name.trim()[0] || '?').toUpperCase();
+            if (!guest.hasCombo) {
+                return `
+                    <div class="flex flex-col items-center text-center pt-1">
+                        <div class="w-14 h-14 rounded-full flex items-center justify-center mb-3.5" style="background: rgba(251,113,133,0.13); color:#fb7185;">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                        <h3 class="text-base font-bold mb-1.5">${escapeHtml(guest.name)}</h3>
+                        <p class="text-xs mb-5" style="color: var(--text-sub);">Esse ingresso não inclui o Combo Red Label.</p>
+                        <button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3.5 rounded-2xl font-extrabold text-sm">Ok</button>
+                    </div>`;
+            }
+            return `
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-base shrink-0" style="background:rgba(234,179,8,0.15); color:#eab308;">${initial}</div>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-bold truncate">${escapeHtml(guest.name)}</h3>
+                        ${comboBadge(guest)}
+                    </div>
+                </div>
+                ${comboActionBlock(guest, 'scanSheetRedeemCombo')}
+                <button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3 rounded-2xl font-bold text-[13.5px]">Fechar</button>`;
         }
 
         function buildScanSheetBanned(guest) {
@@ -2636,10 +2867,12 @@
                         <div class="flex items-center gap-1.5 mt-1 flex-wrap">
                             <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-full" style="${ticketBadgeClasses(guest.ticketType)}">${guest.ticketType}</span>
                             <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-full" style="${statusPillClasses(guest.status)}">${guest.status}</span>
+                            ${guest.hasCombo && currentUserRole !== 'portaria' ? comboBadge(guest) : ''}
                         </div>
                     </div>
                 </div>
                 ${warnings}
+                ${guest.hasCombo && currentUserRole !== 'portaria' ? comboActionBlock(guest, 'scanSheetRedeemCombo') : ''}
                 ${approveButtons}
                 <div class="flex items-center justify-center gap-6 mt-3.5">
                     <button onclick="toggleScanSheetNote()" class="text-[12px] font-bold flex items-center gap-1.5" style="color: var(--text-faint);">
@@ -2714,6 +2947,14 @@
             startScanner();
         });
 
+        const openScannerBarBtn = document.getElementById('openScannerBarBtn');
+        openScannerBarBtn.addEventListener('click', () => {
+            scannerCooldownUntil = 0;
+            sheetGuestId = null;
+            scannerModal.classList.add('active');
+            startScanner();
+        });
+
         scannerCloseBtn.addEventListener('click', () => {
             stopScanner();
             scannerModal.classList.remove('active');
@@ -2754,6 +2995,7 @@
         function matchesFilter(g, filter) {
             if (filter === 'all') return true;
             if (filter === 'Banido') return g.banned;
+            if (filter === 'Combo') return g.hasCombo;
             if (filter === 'Pago' || filter === 'Pendente') return g.status === filter;
             if (filter.startsWith('Lote')) return g.lote === parseInt(filter.slice(4), 10);
             return g.ticketType === filter;
@@ -2781,11 +3023,49 @@
             return 'color:#eab308; background:rgba(234,179,8,0.13);';
         }
 
+        // ---------- Combo (Red Label) badge + one-way redeem control ----------
+        function comboBadge(guest) {
+            return guest.comboRedeemed
+                ? '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#a3a3a3; background:rgba(163,163,163,0.15);">🥃 Combo retirado</span>'
+                : '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#eab308; background:rgba(234,179,8,0.15);">🥃 Combo</span>';
+        }
+
+        // `redeemFn` is the global function name to call on tap — differs between
+        // the check-in list (redeemCombo) and the QR scan sheet (scanSheetRedeemCombo,
+        // which re-renders the sheet instead of closing it).
+        function comboActionBlock(guest, redeemFn) {
+            if (guest.comboRedeemed) {
+                const time = guest.comboRedeemedAt ? new Date(guest.comboRedeemedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+                return `
+                <div class="rounded-xl px-3 py-2.5 text-xs font-medium flex items-center gap-2 mb-3" style="background: rgba(163,163,163,0.1); border: 1px solid rgba(163,163,163,0.25); color: var(--text-sub);">
+                    <span>🥃 Combo retirado${time ? ` às ${time}` : ''}${guest.comboRedeemedBy ? ` · por ${escapeHtml(guest.comboRedeemedBy)}` : ''}</span>
+                </div>`;
+            }
+            return `
+                <button onclick="${redeemFn}('${guest.id}')" class="w-full py-3 rounded-2xl font-bold text-[13px] flex items-center justify-center gap-2 mb-3" style="background: rgba(234,179,8,0.13); border: 1.5px solid rgba(234,179,8,0.35); color:#eab308;">
+                    🥃 Marcar retirada do Combo
+                </button>`;
+        }
+
+        // Clickable version of the combo badge, used only on the guest-list
+        // (cadastro) card — this is where the *purchase* gets marked/unmarked
+        // on an existing ticket, never at the portaria (that tab only redeems).
+        // Locked once redeemed: the drink is already gone, so the purchase flag
+        // can't be flipped back off at that point.
+        function comboToggleControl(guest) {
+            if (guest.comboRedeemed) return comboBadge(guest);
+            if (guest.hasCombo) {
+                return `<button onclick="toggleCombo('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color:#eab308; background:rgba(234,179,8,0.15);">🥃 Combo</button>`;
+            }
+            return `<button onclick="toggleCombo('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-faint); background: var(--bg-input); border:1px dashed var(--border-color);">+ Combo</button>`;
+        }
+
         function guestCard(guest, opts = {}) {
             const waLink = guest.phone ? `https://wa.me/55${guest.phone}` : '#';
             const flags = [
                 guest.checkedIn ? '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#22c55e; background:rgba(34,197,94,0.13);">Na festa</span>' : '',
-                guest.banned ? '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#fb7185; background:rgba(251,113,133,0.15);">Banido</span>' : ''
+                guest.banned ? '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#fb7185; background:rgba(251,113,133,0.15);">Banido</span>' : '',
+                comboToggleControl(guest)
             ].filter(Boolean).join('');
             return `
                 <div class="surface-soft p-3.5 flex flex-col gap-2 relative">
@@ -2864,6 +3144,7 @@
                             <div class="flex items-center gap-1.5 mt-1 flex-wrap text-[10.5px]">
                                 <span class="font-semibold px-2 py-0.5 rounded-full" style="${ticketBadgeClasses(guest.ticketType)}">${guest.ticketType}</span>
                                 <span class="font-semibold px-2 py-0.5 rounded-full" style="${statusPillClasses(guest.status)}">${guest.status}</span>
+                                ${guest.hasCombo && currentUserRole !== 'portaria' ? comboBadge(guest) : ''}
                                 ${guest.notes ? `<span style="color: var(--text-faint);">${escapeHtml(guest.notes)}</span>` : ''}
                             </div>
                         </div>
@@ -2873,6 +3154,8 @@
                             </svg>
                         </button>
                     </div>
+
+                    ${guest.hasCombo && currentUserRole !== 'portaria' ? comboActionBlock(guest, 'redeemCombo') : ''}
 
                     ${guest.banned ? `
                         <div class="rounded-xl px-3 py-2.5 text-xs font-medium flex items-center justify-between gap-2" style="background: rgba(251,113,133,0.08); border: 1px solid rgba(251,113,133,0.22); color:#fb7185;">
@@ -2916,6 +3199,32 @@
             }).join('');
         }
 
+        // Bar tab only ever lists combo purchasers — never the full roster —
+        // so bar staff can't browse names outside their one job.
+        function renderBar() {
+            const term = barSearchInput.value.toLowerCase().trim();
+            const filtered = sortGuestsForDisplay(guests.filter(g => g.hasCombo && matchesSearch(g, term)));
+
+            if (!filtered.length) {
+                barContainer.innerHTML = emptyState('Nenhum combo encontrado.');
+                return;
+            }
+
+            barContainer.innerHTML = filtered.map(guest => {
+                const initial = (guest.name.trim()[0] || '?').toUpperCase();
+                return `
+                <div class="surface p-3.5 flex flex-col gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0" style="background:rgba(234,179,8,0.15); color:#eab308;">${initial}</div>
+                        <div class="truncate flex-1">
+                            <h3 class="font-semibold text-sm truncate leading-snug">${escapeHtml(guest.name)}</h3>
+                        </div>
+                    </div>
+                    ${comboActionBlock(guest, 'redeemCombo')}
+                </div>`;
+            }).join('');
+        }
+
         function updateStats() {
             const total = guests.length;
             const checkedIn = guests.filter(g => g.checkedIn).length;
@@ -2937,11 +3246,14 @@
             breakdownBackstage.textContent = guests.filter(g => g.ticketType === 'Cortesia').length;
             breakdownPending.textContent = pending;
             breakdownBanned.textContent = banned;
+            breakdownComboBought.textContent = guests.filter(g => g.hasCombo).length;
+            breakdownComboRedeemed.textContent = guests.filter(g => g.hasCombo && g.comboRedeemed).length;
         }
 
         function renderAll() {
             renderAddList();
             renderCheckin();
+            renderBar();
             updateStats();
         }
 
@@ -3006,9 +3318,9 @@
         // ---------- Data tools ----------
         exportCsvBtn.addEventListener('click', () => {
             if (guests.length === 0) return alert('Sua lista está vazia.');
-            let csv = "data:text/csv;charset=utf-8,Nome,Telefone,Tipo,Status,Observacao,NaFesta,Banido,ObservacaoPortaria\n";
+            let csv = "data:text/csv;charset=utf-8,Nome,Telefone,Tipo,Status,Observacao,NaFesta,Banido,ObservacaoPortaria,Combo,ComboRetirado\n";
             guests.forEach(g => {
-                csv += `"${g.name}","${g.phone}","${g.ticketType}","${g.status}","${g.notes || ''}","${g.checkedIn ? 'Sim' : 'Não'}","${g.banned ? 'Sim' : 'Não'}","${g.checkinNote || ''}"\n`;
+                csv += `"${g.name}","${g.phone}","${g.ticketType}","${g.status}","${g.notes || ''}","${g.checkedIn ? 'Sim' : 'Não'}","${g.banned ? 'Sim' : 'Não'}","${g.checkinNote || ''}","${g.hasCombo ? 'Sim' : 'Não'}","${g.hasCombo ? (g.comboRedeemed ? 'Sim' : 'Não') : ''}"\n`;
             });
             const link = document.createElement('a');
             link.setAttribute('href', encodeURI(csv));
