@@ -622,6 +622,21 @@
 
                         <div>
                             <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
+                                for="guestAge">Idade (opcional)</label>
+                            <input type="number" id="guestAge" class="field-input w-full" min="0" max="120"
+                                placeholder="Ex: 17">
+                            <p class="text-[11px] mt-1" style="color: var(--text-faint);">Menor de 18 só entra com o termo dos pais assinado.</p>
+                        </div>
+
+                        <label id="guestTermSignedWrap" class="hidden flex items-center gap-2 py-1 text-xs font-semibold cursor-pointer select-none"
+                            style="color: var(--text-sub);">
+                            <input type="checkbox" id="guestTermSigned" class="w-4 h-4 rounded"
+                                style="accent-color: #8b5cf6;">
+                            📝 Pais já assinaram o termo de autorização
+                        </label>
+
+                        <div>
+                            <label class="block text-xs font-semibold mb-1" style="color: var(--text-sub);"
                                 for="guestNotes">Fantasia / Observação</label>
                             <input type="text" id="guestNotes" class="field-input w-full"
                                 placeholder="Ex: Fantasia de Coringa">
@@ -1420,8 +1435,19 @@
                 hasCombo: !!g.hasCombo,
                 comboRedeemed: !!g.comboRedeemed,
                 comboRedeemedAt: g.comboRedeemedAt || null,
-                comboRedeemedBy: g.comboRedeemedBy || ''
+                comboRedeemedBy: g.comboRedeemedBy || '',
+                age: typeof g.age === 'number' ? g.age : null,
+                termSigned: !!g.termSigned
             };
+        }
+
+        // Menor de idade = precisa do termo assinado pelos pais pra entrar.
+        // Idade em branco não bloqueia nada — só bloqueia quando sabemos que é menor.
+        function isMinor(guest) {
+            return typeof guest.age === 'number' && guest.age < 18;
+        }
+        function needsTermBlock(guest) {
+            return isMinor(guest) && !guest.termSigned;
         }
 
         let guests = [];
@@ -1503,6 +1529,9 @@
         const paymentStatusInput = document.getElementById('paymentStatus');
         const guestNotesInput = document.getElementById('guestNotes');
         const guestComboInput = document.getElementById('guestCombo');
+        const guestAgeInput = document.getElementById('guestAge');
+        const guestTermSignedWrap = document.getElementById('guestTermSignedWrap');
+        const guestTermSignedInput = document.getElementById('guestTermSigned');
         const guestNameSuggestions = document.getElementById('guestNameSuggestions');
         const guestNameDupWarning = document.getElementById('guestNameDupWarning');
         const loteChips = document.querySelectorAll('.lote-chip');
@@ -2428,6 +2457,13 @@
         guestNameInput.addEventListener('input', renderNameSuggestions);
         guestNameInput.addEventListener('focus', renderNameSuggestions);
 
+        guestAgeInput.addEventListener('input', () => {
+            const age = parseInt(guestAgeInput.value, 10);
+            const minor = Number.isFinite(age) && age < 18;
+            guestTermSignedWrap.classList.toggle('hidden', !minor);
+            if (!minor) guestTermSignedInput.checked = false;
+        });
+
         // mousedown (not click) fires before the input's blur, so the value swap
         // happens before the dropdown gets hidden
         guestNameSuggestions.addEventListener('mousedown', (e) => {
@@ -2465,6 +2501,9 @@
             // above window.togglePayment for why we never await guest writes.
             const docRef = doc(guestsCol);
             const hasCombo = guestComboInput.checked;
+            const ageParsed = parseInt(guestAgeInput.value, 10);
+            const age = Number.isFinite(ageParsed) ? ageParsed : null;
+            const termSigned = age !== null && age < 18 ? guestTermSignedInput.checked : false;
             const guestData = {
                 name,
                 phone,
@@ -2481,6 +2520,8 @@
                 comboRedeemed: false,
                 comboRedeemedAt: null,
                 comboRedeemedBy: '',
+                age,
+                termSigned,
                 createdAt: Date.now()
             };
 
@@ -2491,6 +2532,9 @@
                 guestPhoneInput.value = '';
                 guestNotesInput.value = '';
                 guestComboInput.checked = false;
+                guestAgeInput.value = '';
+                guestTermSignedInput.checked = false;
+                guestTermSignedWrap.classList.add('hidden');
                 guestNameSuggestions.classList.add('hidden');
                 guestNameSuggestions.innerHTML = '';
                 guestNameDupWarning.classList.add('hidden');
@@ -2612,6 +2656,19 @@
                 'Não foi possível atualizar o combo.'
             );
             logActivity('toggle_combo', `${g.hasCombo ? 'Removeu' : 'Adicionou'} o combo de ${g.name}`);
+        };
+
+        // Só admin marca isso — é a confirmação de que o papel assinado pelos
+        // pais foi conferido pessoalmente. Portaria nunca marca, só é bloqueada
+        // por isso (ver needsTermBlock / buildScanSheetTermRequired).
+        window.toggleTermSigned = function (id) {
+            const g = guests.find(x => x.id === id);
+            if (!g || !isMinor(g)) return;
+            safeWrite(
+                () => updateDoc(doc(db, 'guests', id), { termSigned: !g.termSigned }),
+                'Não foi possível atualizar o termo.'
+            );
+            logActivity('toggle_term_signed', `${g.termSigned ? 'Desmarcou' : 'Marcou'} o termo assinado de ${g.name}`);
         };
 
         window.removeGuest = function (id) {
@@ -2856,6 +2913,9 @@
             if (guest.banned) {
                 if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
                 openScanResultSheet(buildScanSheetBanned(guest));
+            } else if (needsTermBlock(guest)) {
+                if (navigator.vibrate) navigator.vibrate([80, 60, 80]);
+                openScanResultSheet(buildScanSheetTermRequired(guest));
             } else {
                 openScanResultSheet(buildScanSheetValid(guest));
             }
@@ -2956,6 +3016,28 @@
                 <div class="flex justify-center mt-3.5">
                     <button onclick="scanSheetUnban('${guest.id}')" class="text-[11.5px] font-bold" style="color: var(--text-faint);">Remover banimento</button>
                 </div>`;
+        }
+
+        // Hard stop — menor de idade sem o termo assinado marcado pelo admin
+        // não entra, ponto final. Sem botão de liberar aqui: quem resolve isso
+        // é o admin, conferindo o papel e marcando na lista de cadastro.
+        function buildScanSheetTermRequired(guest) {
+            const initial = (guest.name.trim()[0] || '?').toUpperCase();
+            return `
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-base shrink-0" style="background: rgba(251,113,133,0.15); color:#fb7185; border:1.5px solid rgba(251,113,133,0.3);">${initial}</div>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-bold truncate">${escapeHtml(guest.name)}</h3>
+                        <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-full" style="${ticketBadgeClasses(guest.ticketType)}">${guest.ticketType}</span>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2 p-3 rounded-2xl mb-4 text-xs font-semibold" style="background: rgba(251,113,133,0.1); border:1px solid rgba(251,113,133,0.25); color:#fb7185;">
+                    <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <span>Menor de idade (${guest.age} anos) sem o termo dos pais assinado. Não pode entrar.</span>
+                </div>
+                <button onclick="closeScanResultSheet()" class="btn-ghost w-full py-3.5 rounded-2xl font-extrabold text-sm">Ok, entendi</button>`;
         }
 
         function scanSheetWarning(message) {
@@ -3208,12 +3290,54 @@
             return `<button onclick="toggleCombo('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-faint); background: var(--bg-input); border:1px dashed var(--border-color);">+ Combo</button>`;
         }
 
+        // Clickable age chip — prompt() é o mesmo padrão simples já usado pro
+        // motivo do banimento (scanSheetBan). Sem idade definida, mostra "+
+        // Idade"; com idade, mostra o valor e permite corrigir.
+        function ageToggleControl(guest) {
+            if (typeof guest.age === 'number') {
+                return `<button onclick="editGuestAge('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-sub); background: var(--bg-input);">🎂 ${guest.age} anos</button>`;
+            }
+            return `<button onclick="editGuestAge('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-faint); background: var(--bg-input); border:1px dashed var(--border-color);">+ Idade</button>`;
+        }
+
+        window.editGuestAge = function (id) {
+            const g = guests.find(x => x.id === id);
+            if (!g) return;
+            const input = prompt('Idade do convidado:', typeof g.age === 'number' ? String(g.age) : '');
+            if (input === null) return; // cancelou
+            const trimmed = input.trim();
+            if (trimmed === '') {
+                safeWrite(() => updateDoc(doc(db, 'guests', id), { age: null }), 'Não foi possível atualizar a idade.');
+                return;
+            }
+            const age = parseInt(trimmed, 10);
+            if (!Number.isFinite(age) || age < 0 || age > 120) {
+                showToast('Idade inválida.');
+                return;
+            }
+            safeWrite(() => updateDoc(doc(db, 'guests', id), { age }), 'Não foi possível atualizar a idade.');
+            logActivity('edit_age', `Definiu a idade de ${g.name} como ${age}`);
+        };
+
+        // Clickable term-signed badge — só aparece pra convidados marcados como
+        // menor de idade. Vermelho/pendente até o admin confirmar o papel
+        // assinado pessoalmente; some quando o RG/idade não indicar menor.
+        function termToggleControl(guest) {
+            if (!isMinor(guest)) return '';
+            if (guest.termSigned) {
+                return `<button onclick="toggleTermSigned('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color:#22c55e; background:rgba(34,197,94,0.13);">📝 Termo OK</button>`;
+            }
+            return `<button onclick="toggleTermSigned('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color:#fb7185; background:rgba(251,113,133,0.15);">📝 Termo pendente</button>`;
+        }
+
         function guestCard(guest, opts = {}) {
             const waLink = guest.phone ? `https://wa.me/55${guest.phone}` : '#';
             const flags = [
                 guest.checkedIn ? '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#22c55e; background:rgba(34,197,94,0.13);">Na festa</span>' : '',
                 guest.banned ? '<span class="font-semibold px-2 py-0.5 rounded-full" style="color:#fb7185; background:rgba(251,113,133,0.15);">Banido</span>' : '',
-                comboToggleControl(guest)
+                comboToggleControl(guest),
+                ageToggleControl(guest),
+                termToggleControl(guest)
             ].filter(Boolean).join('');
             return `
                 <div class="surface-soft p-3.5 flex flex-col gap-2 relative">
@@ -3504,9 +3628,9 @@
         // ---------- Data tools ----------
         exportCsvBtn.addEventListener('click', () => {
             if (guests.length === 0) return alert('Sua lista está vazia.');
-            let csv = "data:text/csv;charset=utf-8,Nome,Telefone,Tipo,Status,Observacao,NaFesta,Banido,ObservacaoPortaria,Combo,ComboRetirado\n";
+            let csv = "data:text/csv;charset=utf-8,Nome,Telefone,Tipo,Status,Observacao,NaFesta,Banido,ObservacaoPortaria,Combo,ComboRetirado,Idade,MenorDeIdade,TermoAssinado\n";
             guests.forEach(g => {
-                csv += `"${g.name}","${g.phone}","${g.ticketType}","${g.status}","${g.notes || ''}","${g.checkedIn ? 'Sim' : 'Não'}","${g.banned ? 'Sim' : 'Não'}","${g.checkinNote || ''}","${g.hasCombo ? 'Sim' : 'Não'}","${g.hasCombo ? (g.comboRedeemed ? 'Sim' : 'Não') : ''}"\n`;
+                csv += `"${g.name}","${g.phone}","${g.ticketType}","${g.status}","${g.notes || ''}","${g.checkedIn ? 'Sim' : 'Não'}","${g.banned ? 'Sim' : 'Não'}","${g.checkinNote || ''}","${g.hasCombo ? 'Sim' : 'Não'}","${g.hasCombo ? (g.comboRedeemed ? 'Sim' : 'Não') : ''}","${typeof g.age === 'number' ? g.age : ''}","${isMinor(g) ? 'Sim' : 'Não'}","${isMinor(g) ? (g.termSigned ? 'Sim' : 'Não') : ''}"\n`;
             });
             const link = document.createElement('a');
             link.setAttribute('href', encodeURI(csv));
