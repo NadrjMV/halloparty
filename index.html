@@ -1296,7 +1296,10 @@
         <div class="modal-box surface p-5 max-w-[300px] w-full text-center">
             <h3 id="ticketModalName" class="text-base font-bold mb-1 truncate">—</h3>
             <p class="text-xs mb-1" style="color: var(--text-sub);">Mostre esse QR na entrada da festa.</p>
-            <p id="ticketModalCombo" class="hidden text-xs font-bold mb-3" style="color:#eab308;">🥃 Combo Red Label incluído</p>
+            <div class="flex flex-col gap-1 mb-3">
+                <p id="ticketModalCombo" class="hidden text-xs font-bold" style="color:#eab308;">🥃 Combo Red Label incluído</p>
+                <p id="ticketModalVan" class="hidden text-xs font-bold" style="color:#38bdf8;">🚐 Van confirmada — ida e volta</p>
+            </div>
             <div id="ticketQrCanvas" class="flex items-center justify-center p-3 rounded-2xl mb-3"
                 style="background:#ffffff; min-height:190px;"></div>
             <div class="text-center text-[11px] rounded-xl p-3 mb-4 flex flex-col gap-1.5"
@@ -1368,7 +1371,10 @@
             <div id="ticketViewContent" class="hidden surface p-5">
                 <h2 id="ticketViewName" class="text-lg font-bold mb-1 truncate">—</h2>
                 <p id="ticketViewMeta" class="text-xs mb-1" style="color: var(--text-sub);">—</p>
-                <p id="ticketViewCombo" class="hidden text-xs font-bold mb-3" style="color:#eab308;">🥃 Combo Red Label incluído</p>
+                <div class="flex flex-col gap-1 mb-3">
+                    <p id="ticketViewCombo" class="hidden text-xs font-bold" style="color:#eab308;">🥃 Combo Red Label incluído</p>
+                    <p id="ticketViewVan" class="hidden text-xs font-bold" style="color:#38bdf8;">🚐 Van confirmada — ida e volta</p>
+                </div>
                 <div id="ticketViewQrCanvas" class="flex items-center justify-center p-3 rounded-2xl mb-3"
                     style="background:#ffffff; min-height:190px;"></div>
                 <div class="text-center text-[11px] rounded-xl p-3 flex flex-col gap-1.5"
@@ -1673,6 +1679,7 @@
         const ticketModal = document.getElementById('ticketModal');
         const ticketModalName = document.getElementById('ticketModalName');
         const ticketModalCombo = document.getElementById('ticketModalCombo');
+        const ticketModalVan = document.getElementById('ticketModalVan');
         const ticketQrCanvas = document.getElementById('ticketQrCanvas');
         const ticketWhatsappBtn = document.getElementById('ticketWhatsappBtn');
         const ticketCopyBtn = document.getElementById('ticketCopyBtn');
@@ -1684,6 +1691,7 @@
         const ticketViewError = document.getElementById('ticketViewError');
         const ticketViewName = document.getElementById('ticketViewName');
         const ticketViewCombo = document.getElementById('ticketViewCombo');
+        const ticketViewVan = document.getElementById('ticketViewVan');
         const ticketViewMeta = document.getElementById('ticketViewMeta');
         const ticketViewQrCanvas = document.getElementById('ticketViewQrCanvas');
 
@@ -2067,6 +2075,7 @@
                 ticketViewName.textContent = g.name;
                 ticketViewMeta.textContent = `${g.ticketType} · ${g.status}`;
                 ticketViewCombo.classList.toggle('hidden', !g.hasCombo);
+                ticketViewVan.classList.toggle('hidden', !g.wantsVan);
                 await renderQrWithLogo(ticketViewQrCanvas, g.id);
                 fillTicketInfoBlock(ticketViewAddress, ticketViewTime, ticketViewTransport);
                 ticketViewLoading.classList.add('hidden');
@@ -2558,7 +2567,7 @@
             const g = guests.find(x => x.id === id);
             if (!g) return;
             safeWrite(
-                () => updateDoc(doc(db, 'guests', id), { wantsVan: true }),
+                () => updateDoc(doc(db, 'guests', id), { wantsVan: true, vanPaid: true }),
                 'Não foi possível adicionar à van.'
             );
             logActivity('toggle_van', `Adicionou ${g.name} à van`);
@@ -2967,6 +2976,7 @@
             if (!g) return;
             ticketModalName.textContent = g.name;
             ticketModalCombo.classList.toggle('hidden', !g.hasCombo);
+            ticketModalVan.classList.toggle('hidden', !g.wantsVan);
             fillTicketInfoBlock(ticketModalAddress, ticketModalTime, ticketModalTransport);
             const link = `${location.origin}${location.pathname}?ticket=${g.id}`;
             const waLink = g.phone
