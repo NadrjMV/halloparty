@@ -808,6 +808,44 @@
                 <div id="barListContainer" class="flex flex-col gap-2" style="padding-bottom: 42vh;"></div>
             </section>
 
+            <!-- TAB: VAN — quem confirmou vaga na van, admin-only. Puxa da
+                 mesma lista de convidados (não duplica dado), só filtra por
+                 wantsVan e adiciona os campos extras (pago, CPF). -->
+            <section id="tab-van" class="tab-content">
+                <div class="surface p-3.5 mb-3 flex items-center justify-around text-center">
+                    <div>
+                        <p class="text-lg font-bold" id="vanStatTotal">0</p>
+                        <p class="text-[10.5px]" style="color: var(--text-faint);">Confirmados</p>
+                    </div>
+                    <div class="w-px h-8" style="background: var(--border-color);"></div>
+                    <div>
+                        <p class="text-lg font-bold" style="color:#22c55e;" id="vanStatPaid">0</p>
+                        <p class="text-[10.5px]" style="color: var(--text-faint);">Pagos</p>
+                    </div>
+                </div>
+                <div class="surface p-3.5 mb-3">
+                    <label class="block text-xs font-semibold mb-1.5" style="color: var(--text-sub);"
+                        for="vanAddInput">Adicionar convidado à van</label>
+                    <div class="relative">
+                        <input type="text" id="vanAddInput" class="field-input w-full text-sm" autocomplete="off"
+                            placeholder="Digite o nome do convidado...">
+                        <div id="vanAddSuggestions" class="hidden absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-20"
+                            style="background: var(--bg-card); border: 1px solid var(--border-color-strong); box-shadow: var(--shadow-ambient);">
+                        </div>
+                    </div>
+                </div>
+                <div class="relative mb-3">
+                    <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2"
+                        style="color: var(--text-faint);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="text" id="vanSearchInput" class="field-input w-full pl-10 text-sm"
+                        placeholder="Buscar quem já confirmou a van...">
+                </div>
+                <div id="vanListContainer" class="flex flex-col gap-2" style="padding-bottom: 42vh;"></div>
+            </section>
+
             <!-- TAB 3: STATS -->
             <section id="tab-stats" class="tab-content">
                 <div class="surface p-4 mb-4">
@@ -1050,6 +1088,19 @@
                                 d="M5 3h14l-1.5 4.5M5 3l1.5 4.5m0 0L9 15a3 3 0 003 3v3m0-3a3 3 0 003-3l2.5-7.5m-11 0h11M8 21h8" />
                         </svg>
                         <span class="text-[10px]">Bar</span>
+                    </button>
+
+                    <button id="navBtnVan" data-tab="tab-van"
+                        class="nav-btn hidden flex-1 py-2 flex flex-col items-center justify-center gap-1 rounded-xl font-semibold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
+                                d="M2.5 16V9a1.5 1.5 0 0 1 1.5-1.5h8.5l3.4 3.4H20a1.5 1.5 0 0 1 1.5 1.5v3.6" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"
+                                d="M2.5 16h1.3M8.3 16h5.9M18.7 16H21.5" />
+                            <circle cx="6.8" cy="16.4" r="1.9" stroke-width="1.7" />
+                            <circle cx="16.6" cy="16.4" r="1.9" stroke-width="1.7" />
+                        </svg>
+                        <span class="text-[10px]">Van</span>
                     </button>
 
                     <button id="navBtnStats" data-tab="tab-stats"
@@ -1437,7 +1488,10 @@
                 comboRedeemedAt: g.comboRedeemedAt || null,
                 comboRedeemedBy: g.comboRedeemedBy || '',
                 age: typeof g.age === 'number' ? g.age : null,
-                termSigned: !!g.termSigned
+                termSigned: !!g.termSigned,
+                wantsVan: !!g.wantsVan,
+                vanPaid: !!g.vanPaid,
+                vanCpf: g.vanCpf || ''
             };
         }
 
@@ -1550,6 +1604,12 @@
         const portariaListContainer = document.getElementById('portariaListContainer');
         const barSearchInput = document.getElementById('barSearchInput');
         const barListContainer = document.getElementById('barListContainer');
+        const vanSearchInput = document.getElementById('vanSearchInput');
+        const vanListContainer = document.getElementById('vanListContainer');
+        const vanStatTotal = document.getElementById('vanStatTotal');
+        const vanStatPaid = document.getElementById('vanStatPaid');
+        const vanAddInput = document.getElementById('vanAddInput');
+        const vanAddSuggestions = document.getElementById('vanAddSuggestions');
         const appNav = document.getElementById('appNav');
 
         const quickSuccessModal = document.getElementById('quickSuccessModal');
@@ -1562,6 +1622,7 @@
         const navBtnAdd = document.getElementById('navBtnAdd');
         const navBtnCheckin = document.getElementById('navBtnCheckin');
         const navBtnBar = document.getElementById('navBtnBar');
+        const navBtnVan = document.getElementById('navBtnVan');
         const navBtnStats = document.getElementById('navBtnStats');
 
         const statTotal = document.getElementById('statTotal');
@@ -2396,6 +2457,7 @@
             navBtnStats.classList.toggle('hidden', !isAdmin);
             navBtnCheckin.classList.toggle('hidden', isBar);
             navBtnBar.classList.toggle('hidden', !(isAdmin || isBar));
+            navBtnVan.classList.toggle('hidden', !isAdmin);
 
             // Portaria and bar are single-purpose (just "read the QR") — there's
             // nothing to switch between, so the tab bar itself goes away.
@@ -2453,6 +2515,61 @@
             const dup = findExactDuplicateGuest(typed);
             guestNameDupWarning.classList.toggle('hidden', !dup);
         }
+
+        // Adicionar à van: busca entre TODOS os convidados que ainda não
+        // estão marcados, clicar já marca wantsVan direto (sem passar pela
+        // lista principal — a marcação só acontece por aqui, por pedido).
+        function renderVanAddSuggestions() {
+            const typed = vanAddInput.value.trim();
+            const normalizedTyped = normalizeForCompare(typed);
+
+            if (normalizedTyped.length < NAME_SUGGEST_MIN_CHARS) {
+                vanAddSuggestions.classList.add('hidden');
+                vanAddSuggestions.innerHTML = '';
+                return;
+            }
+
+            const matches = guests
+                .filter(g => !g.wantsVan && normalizeForCompare(g.name).startsWith(normalizedTyped))
+                .slice(0, 6);
+
+            if (matches.length) {
+                vanAddSuggestions.innerHTML = matches.map(g => `
+                    <div class="name-suggestion-item" data-id="${g.id}">
+                        <span>${escapeHtml(g.name)}</span>
+                        <span style="color: var(--text-faint); font-weight: 500;">${g.ticketType}</span>
+                    </div>
+                `).join('');
+                vanAddSuggestions.classList.remove('hidden');
+            } else {
+                vanAddSuggestions.classList.add('hidden');
+                vanAddSuggestions.innerHTML = '';
+            }
+        }
+
+        vanAddInput.addEventListener('input', renderVanAddSuggestions);
+        vanAddInput.addEventListener('focus', renderVanAddSuggestions);
+
+        vanAddSuggestions.addEventListener('mousedown', (e) => {
+            const item = e.target.closest('.name-suggestion-item');
+            if (!item) return;
+            e.preventDefault();
+            const id = item.dataset.id;
+            const g = guests.find(x => x.id === id);
+            if (!g) return;
+            safeWrite(
+                () => updateDoc(doc(db, 'guests', id), { wantsVan: true }),
+                'Não foi possível adicionar à van.'
+            );
+            logActivity('toggle_van', `Adicionou ${g.name} à van`);
+            vanAddInput.value = '';
+            vanAddSuggestions.classList.add('hidden');
+            vanAddSuggestions.innerHTML = '';
+        });
+
+        vanAddInput.addEventListener('blur', () => {
+            setTimeout(() => vanAddSuggestions.classList.add('hidden'), 150);
+        });
 
         guestNameInput.addEventListener('input', renderNameSuggestions);
         guestNameInput.addEventListener('focus', renderNameSuggestions);
@@ -2588,6 +2705,7 @@
         checkinSearchInput.addEventListener('input', renderCheckin);
         portariaSearchInput.addEventListener('input', renderPortariaList);
         barSearchInput.addEventListener('input', renderBarList);
+        vanSearchInput.addEventListener('input', renderVanList);
 
         filterChips.forEach(chip => {
             chip.addEventListener('click', () => {
@@ -2669,6 +2787,39 @@
                 'Não foi possível atualizar o termo.'
             );
             logActivity('toggle_term_signed', `${g.termSigned ? 'Desmarcou' : 'Marcou'} o termo assinado de ${g.name}`);
+        };
+
+        // Tudo relacionado à van (pago, CPF, remover) só acontece pela aba
+        // Van — a lista principal só mostra o ícone, não deixa mexer em nada.
+        window.toggleVanPaid = function (id) {
+            const g = guests.find(x => x.id === id);
+            if (!g || !g.wantsVan) return;
+            safeWrite(
+                () => updateDoc(doc(db, 'guests', id), { vanPaid: !g.vanPaid }),
+                'Não foi possível atualizar o pagamento da van.'
+            );
+            logActivity('toggle_van_paid', `${g.vanPaid ? 'Desmarcou' : 'Marcou'} pagamento da van de ${g.name}`);
+        };
+
+        window.editVanCpf = function (id) {
+            const g = guests.find(x => x.id === id);
+            if (!g) return;
+            const input = prompt('CPF de quem vai de van:', g.vanCpf || '');
+            if (input === null) return;
+            const cpf = input.trim();
+            safeWrite(() => updateDoc(doc(db, 'guests', id), { vanCpf: cpf }), 'Não foi possível atualizar o CPF.');
+            logActivity('edit_van_cpf', `Atualizou CPF da van de ${g.name}`);
+        };
+
+        window.removeFromVan = function (id) {
+            const g = guests.find(x => x.id === id);
+            if (!g) return;
+            if (!confirm(`Remover ${g.name} da van?`)) return;
+            safeWrite(
+                () => updateDoc(doc(db, 'guests', id), { wantsVan: false, vanPaid: false }),
+                'Não foi possível remover da van.'
+            );
+            logActivity('toggle_van', `Removeu ${g.name} da van`);
         };
 
         window.removeGuest = function (id) {
@@ -3343,7 +3494,10 @@
                 <div class="surface-soft p-3.5 flex flex-col gap-2 relative">
                     <div class="flex items-center justify-between gap-2">
                         <div class="truncate">
-                            <h3 class="font-semibold text-sm truncate leading-snug">${escapeHtml(guest.name)}</h3>
+                            <h3 class="font-semibold text-sm truncate leading-snug flex items-center gap-1.5">
+                                <span class="truncate">${escapeHtml(guest.name)}</span>
+                                ${guest.wantsVan ? `<svg class="w-3.5 h-3.5 shrink-0" style="color:#38bdf8;" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Vai de van"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.5 16V9a1.5 1.5 0 0 1 1.5-1.5h8.5l3.4 3.4H20a1.5 1.5 0 0 1 1.5 1.5v3.6"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.5 16h1.3M8.3 16h5.9M18.7 16H21.5"/><circle cx="6.8" cy="16.4" r="1.9" stroke-width="1.8"/><circle cx="16.6" cy="16.4" r="1.9" stroke-width="1.8"/></svg>` : ''}
+                            </h3>
                             ${guest.notes ? `<p class="text-[11px] truncate mt-0.5" style="color: var(--text-faint);">${escapeHtml(guest.notes)}</p>` : ''}
                         </div>
                         <div class="flex flex-col items-end gap-1 shrink-0">
@@ -3534,6 +3688,52 @@
             }).join('');
         }
 
+        // Van's list — filtered to whoever's marked wantsVan (from the Van
+        // tab's own "adicionar" search, never from the main list). Pago/CPF/
+        // remover all live only here, on purpose.
+        function renderVanList() {
+            const term = vanSearchInput.value.toLowerCase().trim();
+            const inVan = guests.filter(g => g.wantsVan);
+            vanStatTotal.textContent = inVan.length;
+            vanStatPaid.textContent = inVan.filter(g => g.vanPaid).length;
+
+            const filtered = sortGuestsForDisplay(inVan.filter(g => matchesSearch(g, term)));
+
+            if (!filtered.length) {
+                vanListContainer.innerHTML = emptyState('Ninguém confirmado na van ainda.');
+                return;
+            }
+
+            vanListContainer.innerHTML = filtered.map(guest => {
+                const initial = (guest.name.trim()[0] || '?').toUpperCase();
+                const paidPill = guest.vanPaid
+                    ? `<button onclick="toggleVanPaid('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color:#22c55e; background:rgba(34,197,94,0.13);">Pago</button>`
+                    : `<button onclick="toggleVanPaid('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color:#eab308; background:rgba(234,179,8,0.15);">Pendente</button>`;
+                const cpfChip = `<button onclick="editVanCpf('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-sub); background: var(--bg-input);">${guest.vanCpf ? escapeHtml(guest.vanCpf) : '+ CPF'}</button>`;
+                const ageChip = typeof guest.age === 'number'
+                    ? `<span class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-faint); background: var(--bg-input);">${guest.age} anos</span>`
+                    : '';
+                return `
+                <div class="surface-soft p-3 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0" style="background:rgba(56,189,248,0.15); color:#38bdf8;">${initial}</div>
+                    <div class="truncate flex-1">
+                        <h3 class="font-semibold text-sm truncate leading-snug">${escapeHtml(guest.name)}</h3>
+                        <div class="flex items-center gap-1.5 mt-1 flex-wrap text-[10.5px]">
+                            ${paidPill}
+                            ${cpfChip}
+                            ${guest.hasCombo ? comboBadge(guest) : ''}
+                            ${ageChip}
+                        </div>
+                    </div>
+                    <button onclick="removeFromVan('${guest.id}')" aria-label="Remover da van" class="p-1 shrink-0" style="color: var(--text-faint);">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
         function updateStats() {
             const total = guests.length;
             const checkedIn = guests.filter(g => g.checkedIn).length;
@@ -3564,6 +3764,7 @@
             renderCheckin();
             renderPortariaList();
             renderBarList();
+            renderVanList();
             updateStats();
         }
 
@@ -3628,9 +3829,9 @@
         // ---------- Data tools ----------
         exportCsvBtn.addEventListener('click', () => {
             if (guests.length === 0) return alert('Sua lista está vazia.');
-            let csv = "data:text/csv;charset=utf-8,Nome,Telefone,Tipo,Status,Observacao,NaFesta,Banido,ObservacaoPortaria,Combo,ComboRetirado,Idade,MenorDeIdade,TermoAssinado\n";
+            let csv = "data:text/csv;charset=utf-8,Nome,Telefone,Tipo,Status,Observacao,NaFesta,Banido,ObservacaoPortaria,Combo,ComboRetirado,Idade,MenorDeIdade,TermoAssinado,VaiDeVan,VanPaga,CpfVan\n";
             guests.forEach(g => {
-                csv += `"${g.name}","${g.phone}","${g.ticketType}","${g.status}","${g.notes || ''}","${g.checkedIn ? 'Sim' : 'Não'}","${g.banned ? 'Sim' : 'Não'}","${g.checkinNote || ''}","${g.hasCombo ? 'Sim' : 'Não'}","${g.hasCombo ? (g.comboRedeemed ? 'Sim' : 'Não') : ''}","${typeof g.age === 'number' ? g.age : ''}","${isMinor(g) ? 'Sim' : 'Não'}","${isMinor(g) ? (g.termSigned ? 'Sim' : 'Não') : ''}"\n`;
+                csv += `"${g.name}","${g.phone}","${g.ticketType}","${g.status}","${g.notes || ''}","${g.checkedIn ? 'Sim' : 'Não'}","${g.banned ? 'Sim' : 'Não'}","${g.checkinNote || ''}","${g.hasCombo ? 'Sim' : 'Não'}","${g.hasCombo ? (g.comboRedeemed ? 'Sim' : 'Não') : ''}","${typeof g.age === 'number' ? g.age : ''}","${isMinor(g) ? 'Sim' : 'Não'}","${isMinor(g) ? (g.termSigned ? 'Sim' : 'Não') : ''}","${g.wantsVan ? 'Sim' : 'Não'}","${g.wantsVan ? (g.vanPaid ? 'Sim' : 'Não') : ''}","${g.wantsVan ? (g.vanCpf || '') : ''}"\n`;
             });
             const link = document.createElement('a');
             link.setAttribute('href', encodeURI(csv));
