@@ -3817,7 +3817,7 @@
                 return;
             }
 
-            // van role: same list, read-only — status as plain pills, no CPF, no remove.
+            // van role: same list, read-only — status and CPF as plain text, no remove.
             const readOnly = currentUserRole === 'van';
             vanListContainer.innerHTML = filtered.map(guest => {
                 const initial = (guest.name.trim()[0] || '?').toUpperCase();
@@ -3826,7 +3826,7 @@
                 const paidPill = guest.vanPaid
                     ? `<${paidTag}${paidClick} class="font-semibold px-2 py-0.5 rounded-full" style="color:#22c55e; background:rgba(34,197,94,0.13);">Pago</${paidTag}>`
                     : `<${paidTag}${paidClick} class="font-semibold px-2 py-0.5 rounded-full" style="color:#eab308; background:rgba(234,179,8,0.15);">Pendente</${paidTag}>`;
-                const cpfChip = readOnly ? '' : `<button onclick="editVanCpf('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-sub); background: var(--bg-input);">${guest.vanCpf ? escapeHtml(guest.vanCpf) : '+ CPF'}</button>`;
+                const cpfChip = readOnly ? `<span class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-sub); background: var(--bg-input);">${guest.vanCpf ? escapeHtml(guest.vanCpf) : 'CPF não informado'}</span>` : `<button onclick="editVanCpf('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-sub); background: var(--bg-input);">${guest.vanCpf ? escapeHtml(guest.vanCpf) : '+ CPF'}</button>`;
                 const ageChip = typeof guest.age === 'number'
                     ? `<span class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-faint); background: var(--bg-input);">${guest.age} anos</span>`
                     : '';
