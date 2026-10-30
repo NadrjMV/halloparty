@@ -501,6 +501,12 @@
             Sem conexão com o Firebase — os dados podem não estar sincronizados. Verifique as regras do Firestore.
         </div>
 
+        <div id="syncPill" role="status" aria-live="polite"
+            class="fixed z-[55] text-[10.5px] font-semibold px-2.5 py-1 rounded-full"
+            style="top:8px; right:8px; max-width:calc(100vw - 16px); background:rgba(34,197,94,0.15); color:#22c55e; backdrop-filter:blur(6px);">
+            ✓ Sincronizado
+        </div>
+
         <div class="ambient-wash"></div>
 
         <div class="app-shell px-4 pt-4">
@@ -823,7 +829,7 @@
                         <p class="text-[10.5px]" style="color: var(--text-faint);">Pagos</p>
                     </div>
                 </div>
-                <div class="surface p-3.5 mb-3">
+                <div id="vanAddCard" class="surface p-3.5 mb-3">
                     <label class="block text-xs font-semibold mb-1.5" style="color: var(--text-sub);"
                         for="vanAddInput">Adicionar convidado à van</label>
                     <div class="relative">
@@ -999,6 +1005,7 @@
                         <select id="inviteRole" class="field-input w-full">
                             <option value="portaria" selected>Portaria (segurança — só valida entrada)</option>
                             <option value="bar">Bar (só entrega o combo)</option>
+                            <option value="van">Van (só vê a lista da van, sem editar)</option>
                             <option value="admin">Admin (acesso total)</option>
                         </select>
                     </div>
@@ -1398,7 +1405,8 @@
         import {
             getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
             collection, doc, addDoc, updateDoc, deleteDoc,
-            onSnapshot, query, orderBy, limit, writeBatch, getDoc, setDoc, increment
+            onSnapshot, query, orderBy, limit, writeBatch, getDoc, setDoc, increment,
+            enableNetwork, disableNetwork, waitForPendingWrites
         } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
         import {
             getAuth, onAuthStateChanged, signInWithEmailAndPassword,
@@ -1420,13 +1428,26 @@
         // wifi drops mid-event. Falls back to the in-memory cache if unsupported
         // (e.g. private browsing) so the app never hard-fails on init.
         let db;
+        // false = fell back to the in-memory cache: queued writes would die with
+        // the tab, so the sync pill warns and beforeunload asks before closing.
+        let persistentCacheActive = true;
         try {
             db = initializeFirestore(firebaseApp, {
                 localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
             });
         } catch (err) {
             console.warn('Cache offline indisponível, usando cache em memória.', err);
+            persistentCacheActive = false;
             db = getFirestore(firebaseApp);
+        }
+
+        // Ask the browser not to evict our IndexedDB (cached guest list + queued
+        // writes) under storage pressure, and cache the app shell for offline loads.
+        try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker indisponível:', err));
+            });
         }
 
         const auth = getAuth(firebaseApp);
@@ -1712,13 +1733,70 @@
         // Firebase" banner showing up every time someone logged in fresh.
         let unsubscribeAuthListeners = null;
 
+        // ---------- Offline sync status + guaranteed retry ----------
+        // Writes made offline sit in Firestore's IndexedDB queue (survives
+        // reloads and closed tabs) and are sent when the connection returns.
+        // This pill makes the queue visible, and the watchdog below forces a
+        // reconnect when the SDK's own backoff leaves the queue stuck.
+        const syncPill = document.getElementById('syncPill');
+        let pendingWriteCount = 0;
+        let lastWatchdogPending = 0;
+
+        function renderSyncPill() {
+            const online = navigator.onLine;
+            const warnMemory = !persistentCacheActive && pendingWriteCount > 0 ? ' ⚠ não feche a página' : '';
+            let text, color, bg;
+            if (!online) {
+                text = pendingWriteCount
+                    ? `Sem internet — ${pendingWriteCount} ação(ões) guardada(s), envio automático${warnMemory}`
+                    : 'Sem internet — funcionando offline';
+                color = '#eab308'; bg = 'rgba(234,179,8,0.18)';
+            } else if (pendingWriteCount) {
+                text = `Enviando ${pendingWriteCount} ação(ões)…${warnMemory}`;
+                color = '#eab308'; bg = 'rgba(234,179,8,0.18)';
+            } else {
+                text = '✓ Sincronizado';
+                color = '#22c55e'; bg = 'rgba(34,197,94,0.15)';
+            }
+            syncPill.textContent = text;
+            syncPill.style.color = color;
+            syncPill.style.background = bg;
+        }
+
+        function forceReconnect() {
+            // disable→enable restarts the connection and resets the SDK's
+            // retry backoff; cached data and queued writes are untouched.
+            disableNetwork(db).then(() => enableNetwork(db)).catch(err => console.warn('Reconexão falhou:', err));
+        }
+
+        window.addEventListener('online', () => { renderSyncPill(); forceReconnect(); });
+        window.addEventListener('offline', renderSyncPill);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && navigator.onLine && pendingWriteCount) forceReconnect();
+        });
+        // Stuck detection: online, still pending, and not a single write went
+        // through since the last tick → kick the connection.
+        setInterval(() => {
+            if (navigator.onLine && pendingWriteCount && pendingWriteCount >= lastWatchdogPending) forceReconnect();
+            lastWatchdogPending = pendingWriteCount;
+        }, 20000);
+        window.addEventListener('beforeunload', (e) => {
+            if (!persistentCacheActive && pendingWriteCount > 0) { e.preventDefault(); e.returnValue = ''; }
+        });
+        renderSyncPill();
+
         function subscribeAuthenticatedListeners() {
             if (unsubscribeAuthListeners) return; // already subscribed
+            let firstGuestsSnapshot = true;
             const unsubs = [
-                onSnapshot(guestsQuery, (snapshot) => {
+                onSnapshot(guestsQuery, { includeMetadataChanges: true }, (snapshot) => {
                     guests = snapshot.docs.map(d => migrateGuest({ id: d.id, ...d.data() }));
+                    pendingWriteCount = snapshot.docs.filter(d => d.metadata.hasPendingWrites).length;
+                    renderSyncPill();
                     syncBanner.classList.add('hidden');
-                    renderAll();
+                    // Metadata-only snapshots (pending → synced) don't change data
+                    if (firstGuestsSnapshot || snapshot.docChanges().length) renderAll();
+                    firstGuestsSnapshot = false;
                 }, (error) => {
                     console.error('Erro de sincronização com o Firestore:', error);
                     syncBanner.classList.remove('hidden');
@@ -2188,6 +2266,8 @@
                         return;
                     }
                     currentUserRole = userDocSnap.data().role || 'admin';
+                    // Remembered so a later offline start knows who this is.
+                    try { localStorage.setItem('halloween_role_' + user.uid, currentUserRole); } catch (e) { /* ignore */ }
                 } catch (err) {
                     if (err && err.code === 'permission-denied') {
                         // The Firestore rules themselves rejected this — a definitive
@@ -2201,10 +2281,22 @@
                         loginError.classList.remove('hidden');
                         return;
                     }
-                    // A real connectivity hiccup (offline, timeout) — the original
-                    // reasoning still holds here: don't lock someone out of the app
-                    // they were already using mid-event just because the wifi blipped.
-                    console.warn('Não foi possível verificar o status do usuário, liberando acesso.', err);
+                    // A real connectivity hiccup (offline, timeout): don't lock
+                    // someone out mid-event just because the wifi blipped — but
+                    // use the role remembered from their last successful check,
+                    // never the 'admin' default (that would hand admin controls to
+                    // portaria/bar/van accounts whenever they're offline).
+                    let cachedRole = null;
+                    try { cachedRole = localStorage.getItem('halloween_role_' + user.uid); } catch (e) { /* ignore */ }
+                    if (!cachedRole) {
+                        console.warn('Offline e sem função guardada neste aparelho — falha fechada.', err);
+                        showLoginPane();
+                        loginError.textContent = 'Primeiro acesso neste aparelho precisa de internet. Conecte e entre de novo.';
+                        loginError.classList.remove('hidden');
+                        return;
+                    }
+                    currentUserRole = cachedRole;
+                    console.warn('Não foi possível verificar o status do usuário, usando a função guardada.', err);
                 }
                 currentUserEmail = user.email;
                 applyRoleUI();
@@ -2306,6 +2398,7 @@
         function roleLabel(role) {
             if (role === 'portaria') return 'Portaria';
             if (role === 'bar') return 'Bar';
+            if (role === 'van') return 'Van (só confere)';
             return 'Admin';
         }
 
@@ -2461,21 +2554,25 @@
             const isAdmin = currentUserRole === 'admin';
             const isPortaria = currentUserRole === 'portaria';
             const isBar = currentUserRole === 'bar';
+            // van: person in charge of the van — only sees the Van list, read-only
+            // (no add/remove, no paid/CPF edits, no scanner, no guest list).
+            const isVan = currentUserRole === 'van';
 
             navBtnAdd.classList.toggle('hidden', !isAdmin);
             navBtnStats.classList.toggle('hidden', !isAdmin);
-            navBtnCheckin.classList.toggle('hidden', isBar);
+            navBtnCheckin.classList.toggle('hidden', isBar || isVan);
             navBtnBar.classList.toggle('hidden', !(isAdmin || isBar));
-            navBtnVan.classList.toggle('hidden', !isAdmin);
+            navBtnVan.classList.toggle('hidden', !(isAdmin || isVan));
+            document.getElementById('vanAddCard').classList.toggle('hidden', !isAdmin);
 
             // Portaria and bar are single-purpose (just "read the QR") — there's
             // nothing to switch between, so the tab bar itself goes away.
-            appNav.classList.toggle('hidden', isPortaria || isBar);
+            appNav.classList.toggle('hidden', isPortaria || isBar || isVan);
 
             // Portaria gets a read-only "who's already in" list — no approve/ban/
             // notes buttons, that's not theirs to touch — plus the docked scanner,
             // which is the only real way an entry gets approved for this role.
-            checkinFullView.classList.toggle('hidden', isPortaria);
+            checkinFullView.classList.toggle('hidden', isPortaria || isVan);
             checkinSimpleView.style.display = isPortaria ? 'flex' : 'none';
             openScannerPortariaBtn.style.display = isPortaria ? 'flex' : 'none';
             openScannerBarBtn.style.display = isBar ? 'flex' : 'none';
@@ -2483,6 +2580,7 @@
             let defaultTab = 'tab-add';
             if (isPortaria) defaultTab = 'tab-checkin';
             else if (isBar) defaultTab = 'tab-bar';
+            else if (isVan) defaultTab = 'tab-van';
             activateTab(defaultTab);
         }
 
@@ -3719,12 +3817,16 @@
                 return;
             }
 
+            // van role: same list, read-only — status as plain pills, no CPF, no remove.
+            const readOnly = currentUserRole === 'van';
             vanListContainer.innerHTML = filtered.map(guest => {
                 const initial = (guest.name.trim()[0] || '?').toUpperCase();
+                const paidTag = readOnly ? 'span' : 'button';
+                const paidClick = readOnly ? '' : ` onclick="toggleVanPaid('${guest.id}')"`;
                 const paidPill = guest.vanPaid
-                    ? `<button onclick="toggleVanPaid('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color:#22c55e; background:rgba(34,197,94,0.13);">Pago</button>`
-                    : `<button onclick="toggleVanPaid('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color:#eab308; background:rgba(234,179,8,0.15);">Pendente</button>`;
-                const cpfChip = `<button onclick="editVanCpf('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-sub); background: var(--bg-input);">${guest.vanCpf ? escapeHtml(guest.vanCpf) : '+ CPF'}</button>`;
+                    ? `<${paidTag}${paidClick} class="font-semibold px-2 py-0.5 rounded-full" style="color:#22c55e; background:rgba(34,197,94,0.13);">Pago</${paidTag}>`
+                    : `<${paidTag}${paidClick} class="font-semibold px-2 py-0.5 rounded-full" style="color:#eab308; background:rgba(234,179,8,0.15);">Pendente</${paidTag}>`;
+                const cpfChip = readOnly ? '' : `<button onclick="editVanCpf('${guest.id}')" class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-sub); background: var(--bg-input);">${guest.vanCpf ? escapeHtml(guest.vanCpf) : '+ CPF'}</button>`;
                 const ageChip = typeof guest.age === 'number'
                     ? `<span class="font-semibold px-2 py-0.5 rounded-full" style="color: var(--text-faint); background: var(--bg-input);">${guest.age} anos</span>`
                     : '';
@@ -3740,11 +3842,11 @@
                             ${ageChip}
                         </div>
                     </div>
-                    <button onclick="removeFromVan('${guest.id}')" aria-label="Remover da van" class="p-1 shrink-0" style="color: var(--text-faint);">
+                    ${readOnly ? '' : `<button onclick="removeFromVan('${guest.id}')" aria-label="Remover da van" class="p-1 shrink-0" style="color: var(--text-faint);">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                    </button>
+                    </button>`}
                 </div>`;
             }).join('');
         }
